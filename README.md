@@ -81,17 +81,18 @@ python main.py --mode baseline
 ![Network Structure](outputs/network_structure.png)
 
 - `semantic_variance.png` - Variance over time
-![Network Structure](outputs/semantic_variance.png)
+![Semantic Variance](outputs/semantic_variance.png)
 
 - `sample_opinions.txt` - Opinion trajectories for 3 agents
 
-## 🧪 Experiment Modes (To Do)
 ### 2. Bot Intervention Study
 ```bash
 python main.py --mode intervention
 ```
 Tests network resilience by adding a high-degree "disinformation bot" node.
-
+**Outputs:**
+- `intervention_comparison.png` - Intervention Comparison
+![Intervention Comparison](outputs/intervention_comparison.png)
 
 
 ### 3. Topology Comparison
@@ -99,6 +100,9 @@ Tests network resilience by adding a high-degree "disinformation bot" node.
 python main.py --mode comparison
 ```
 Compares Scale-free, Small-world, and Random networks.
+**Outputs:**
+- `topology_comparison.png` - Topology Comparison
+![Topology Comparison](outputs/topology_comparison.png)
 
 
 
@@ -107,7 +111,9 @@ Compares Scale-free, Small-world, and Random networks.
 python main.py --mode degroot
 ```
 Compares LLM semantic dynamics with classical DeGroot model.
-
+**Outputs:**
+- `llm_vs_degroot.png` - LLM VS Degroot Comparison
+![Degroot Comparison](outputs/llm_vs_degroot.png)
 
 
 ---
