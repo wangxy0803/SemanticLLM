@@ -4,17 +4,17 @@ Defines personas, network parameters, and API settings.
 """
 
 # API Configuration
-API_PROVIDER = "anthropic"  # Options: "anthropic", "openai", "gemini"
-API_MODEL = "claude-sonnet-4-20250514"  # Use Sonnet 4 for best results
+API_PROVIDER = "gemini"  # Options: "anthropic", "openai", "gemini"
+API_MODEL = "gemini-2.5-flash"  # Model used for simulation (though persona_agent.py overrides this locally)
 API_KEY = None  # Set this to your API key or use environment variable
 
 # Network Configuration
 NETWORK_SIZE = 30
 NETWORK_TYPE = "karate"  # Options: "karate", "scale_free", "small_world", "random"
-SIMULATION_ROUNDS = 8
+SIMULATION_ROUNDS = 15
 
 # Topic Configuration
-CONTROVERSIAL_TOPIC = "AI Regulation"
+CONTROVERSIAL_TOPIC = "Should we support large-scale deployment of humanoid robots in our society?"
 
 # Persona Definitions - 6 archetypes with variations
 PERSONA_TEMPLATES = {
@@ -107,26 +107,3 @@ PERSONA_TEMPLATES = {
     ]
 }
 
-# System Prompt Template
-SYSTEM_PROMPT_TEMPLATE = """You are participating in a network discussion about {topic}.
-
-{persona_prompt}
-
-You will read opinions from your neighbors in the network, then update your own opinion based on what you've heard. Your response should be a short paragraph (3-5 sentences) expressing your current view on {topic}.
-
-Important guidelines:
-- Stay in character with your persona
-- Engage seriously with neighbors' arguments
-- You can be persuaded by strong reasoning, but maintain your core values/reasoning style
-- Be concise - just state your updated position and key reasoning
-- Write naturally, not in bullet points or lists
-"""
-
-# Memory and Neighbor Opinion Template
-CONVERSATION_TEMPLATE = """Your current opinion:
-{current_opinion}
-
-Your neighbors' current opinions:
-{neighbor_opinions}
-
-Based on these perspectives, what is your updated opinion on {topic}? (Respond with 3-5 sentences only)"""

@@ -13,18 +13,31 @@ import networkx as nx
 class SemanticAnalyzer:
     """Analyzes semantic polarization using SBERT embeddings."""
     
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "all-mpnet-base-v2"):
         """
         Initialize with a sentence transformer model.
         
         Args:
             model_name: HuggingFace model name. 
-                       'all-MiniLM-L6-v2' is fast and good quality.
+                       'all-mpnet-base-v2' is much more precise than MiniLM
+                       and fits easily on an RTX 4060 (uses < 500MB VRAM).
         """
-        print(f"Loading sentence transformer: {model_name}")
-        self.model = SentenceTransformer(model_name)
-        print("Model loaded successfully")
-    
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Loading sentence transformer: {model_name} on {device}")
+
+        # This runs LOCALLY.
+        # First run downloads weights from HF Hub to local cache.
+        # Subsequent runs use local cache.
+        # It does NOT send data to an external API.
+        try:
+            self.model = SentenceTransformer(model_name, device=device)
+            print("Model loaded successfully (Local Inference)")
+        except Exception as e:
+            print(f"Failed to load model from HF Hub: {e}")
+            print("Try pre-downloading the model or checking internet connection.")
+            raise e
+
     def embed_opinions(self, opinions: Dict[int, str]) -> Dict[int, np.ndarray]:
         """
         Convert opinion texts to embeddings.

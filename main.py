@@ -11,6 +11,7 @@ Usage:
 import argparse
 import os
 from pathlib import Path
+import json
 
 # Import project modules
 from config import (
@@ -20,11 +21,9 @@ from config import (
 )
 from network_generation import (
     create_network, visualize_network, 
-    print_network_stats, add_disinformation_bot
-)
-from persona_assignment import (
-    assign_personas_balanced, assign_personas_polarized,
-    print_persona_distribution
+    print_network_stats, add_disinformation_bot,
+    assign_personas_balanced,
+    print_persona_distribution, load_generated_personas
 )
 from simulation import create_api_client, run_simulation, run_bot_intervention_study
 from measurement import (
@@ -41,7 +40,7 @@ def setup_output_directory():
     return output_dir
 
 
-def run_baseline_simulation(api_key: str = None):
+def run_baseline_simulation(api_key: str = None, use_cache: bool = False):
     """
     Run basic simulation: one network, balanced personas, track variance.
     """
@@ -56,17 +55,36 @@ def run_baseline_simulation(api_key: str = None):
     print_network_stats(G)
     
     # 2. Assign personas
-    node_personas = assign_personas_balanced(G)
+    try:
+        print("Loading generated personas from prompts/persona/...")
+        node_personas = load_generated_personas(G)
+    except Exception as e:
+        print(f"Warning: Could not load generated personas ({e}). Falling back to template assignment.")
+        node_personas = assign_personas_balanced(G)
+
     print_persona_distribution(node_personas)
     
     # 3. Visualize network
     viz_path = output_dir / "network_structure.png"
     visualize_network(G, node_personas, save_path=str(viz_path))
     
-    # 4. Run simulation
-    api_client = create_api_client(api_key)
-    opinion_history = run_simulation(G, node_personas, api_client, SIMULATION_ROUNDS)
-    
+    # 4. Run simulation (or load from cache)
+    history_path = output_dir / "simulation_history_baseline.json"
+    opinion_history = None
+
+    if use_cache and history_path.exists():
+        print(f"Loading cached simulation history from {history_path}...")
+        try:
+            opinion_history = load_simulation_history(history_path)
+            print("Cache loaded successfully.")
+        except Exception as e:
+            print(f"Failed to load cache: {e}. Running fresh simulation.")
+
+    if opinion_history is None:
+        api_client = create_api_client(api_key)
+        opinion_history = run_simulation(G, node_personas, api_client, SIMULATION_ROUNDS)
+        save_simulation_history(opinion_history, history_path)
+
     # 5. Analyze results
     analyzer = SemanticAnalyzer()
     analysis = analyzer.analyze_simulation(opinion_history)
@@ -88,7 +106,7 @@ def run_baseline_simulation(api_key: str = None):
     return opinion_history, analysis
 
 
-def run_intervention_study(api_key: str = None):
+def run_intervention_study(api_key: str = None, use_cache: bool = False):
     """
     Run bot intervention study: compare baseline vs. disinformation bot.
     """
@@ -98,10 +116,19 @@ def run_intervention_study(api_key: str = None):
     
     output_dir = setup_output_directory()
     
+    # Paths for caching
+    baseline_path = output_dir / "intervention_baseline_history.json"
+    intervention_path = output_dir / "intervention_bot_history.json"
+
     # Setup
     G = create_network(NETWORK_TYPE, NETWORK_SIZE)
-    node_personas = assign_personas_balanced(G)
-    
+    try:
+        node_personas = load_generated_personas(G)
+        print("Using loaded personas for intervention study.")
+    except Exception:
+        print("Using template personas for intervention study.")
+        node_personas = assign_personas_balanced(G)
+
     # Define bot persona (extreme disinformation)
     bot_persona = {
         "name": "Disinformation Bot",
@@ -110,12 +137,27 @@ def run_intervention_study(api_key: str = None):
         "initial_opinion": "AI regulation is a totalitarian conspiracy by the global elite to control humanity. It will destroy all innovation and lead to complete government surveillance. Anyone supporting regulation is either naive or part of the conspiracy. We must resist all forms of AI governance."
     }
     
-    # Run both simulations
-    api_client = create_api_client(api_key)
-    baseline_history, intervention_history = run_bot_intervention_study(
-        G, node_personas, api_client, bot_persona, SIMULATION_ROUNDS
-    )
-    
+    baseline_history = None
+    intervention_history = None
+
+    if use_cache and baseline_path.exists() and intervention_path.exists():
+        print("Loading cached intervention study results...")
+        try:
+            baseline_history = load_simulation_history(baseline_path)
+            intervention_history = load_simulation_history(intervention_path)
+            print("Cache loaded successfully.")
+        except Exception as e:
+            print(f"Failed to load cache: {e}. Running fresh simulation.")
+
+    if baseline_history is None or intervention_history is None:
+        # Run both simulations
+        api_client = create_api_client(api_key)
+        baseline_history, intervention_history = run_bot_intervention_study(
+            G, node_personas, api_client, bot_persona, SIMULATION_ROUNDS
+        )
+        save_simulation_history(baseline_history, baseline_path)
+        save_simulation_history(intervention_history, intervention_path)
+
     # Analyze both
     analyzer = SemanticAnalyzer()
     baseline_analysis = analyzer.analyze_simulation(baseline_history)
@@ -138,7 +180,7 @@ def run_intervention_study(api_key: str = None):
     print(f"\n✓ Results saved to {output_dir}")
 
 
-def run_topology_comparison(api_key: str = None):
+def run_topology_comparison(api_key: str = None, use_cache: bool = False):
     """
     Compare different network topologies: scale-free vs. small-world vs. random.
     """
@@ -160,15 +202,32 @@ def run_topology_comparison(api_key: str = None):
         
         # Create network
         G = create_network(topology, NETWORK_SIZE)
-        node_personas = assign_personas_balanced(G)
-        
-        # Run simulation
-        opinion_history = run_simulation(
-            G, node_personas, api_client, 
-            num_rounds=SIMULATION_ROUNDS, 
-            verbose=False
-        )
-        
+        try:
+            node_personas = load_generated_personas(G)
+        except Exception:
+            node_personas = assign_personas_balanced(G)
+
+        # Run simulation (or load from cache)
+        # Use different filenames for each topology
+        history_path = output_dir / f"simulation_history_topology_{topology}.json"
+        opinion_history = None
+
+        if use_cache and history_path.exists():
+            print(f"Loading cached simulation history for {topology}...")
+            try:
+                opinion_history = load_simulation_history(history_path)
+                print("Cache loaded successfully.")
+            except Exception as e:
+                print(f"Failed to load cache: {e}. Running fresh simulation.")
+
+        if opinion_history is None:
+            opinion_history = run_simulation(
+                G, node_personas, api_client,
+                num_rounds=SIMULATION_ROUNDS,
+                verbose=False
+            )
+            save_simulation_history(opinion_history, history_path)
+
         # Analyze
         analyzer = SemanticAnalyzer()
         analysis = analyzer.analyze_simulation(opinion_history)
@@ -202,7 +261,7 @@ def run_topology_comparison(api_key: str = None):
     print(f"\n✓ Results saved to {output_dir}")
 
 
-def run_degroot_comparison(api_key: str = None):
+def run_degroot_comparison(api_key: str = None, use_cache: bool = False):
     """
     Compare LLM simulation with classical DeGroot model.
     """
@@ -216,10 +275,23 @@ def run_degroot_comparison(api_key: str = None):
     G = create_network(NETWORK_TYPE, NETWORK_SIZE)
     node_personas = assign_personas_balanced(G)
     
-    # Run LLM simulation
-    api_client = create_api_client(api_key)
-    llm_history = run_simulation(G, node_personas, api_client, SIMULATION_ROUNDS)
-    
+    # Run LLM simulation (or load from cache)
+    history_path = output_dir / "simulation_history_degroot_llm.json"
+    llm_history = None
+
+    if use_cache and history_path.exists():
+        print(f"Loading cached simulation history from {history_path}...")
+        try:
+            llm_history = load_simulation_history(history_path)
+            print("Cache loaded successfully.")
+        except Exception as e:
+            print(f"Failed to load cache: {e}. Running fresh simulation.")
+
+    if llm_history is None:
+        api_client = create_api_client(api_key)
+        llm_history = run_simulation(G, node_personas, api_client, SIMULATION_ROUNDS)
+        save_simulation_history(llm_history, history_path)
+
     # Analyze LLM
     analyzer = SemanticAnalyzer()
     llm_analysis = analyzer.analyze_simulation(llm_history)
@@ -251,8 +323,8 @@ def save_sample_opinions(opinion_history, node_personas, filepath):
         
         for node in sample_nodes:
             f.write(f"\n{'='*70}\n")
-            f.write(f"Node {node}: {node_personas[node]['name']}\n")
-            f.write(f"Archetype: {node_personas[node]['archetype']}\n")
+            f.write(f"Node {node}: {node_personas[node].get('name', f'Agent {node}')}\n")
+            f.write(f"Archetype: {node_personas[node].get('archetype', 'Unknown')}\n")
             f.write(f"{'='*70}\n\n")
             
             for round_num, opinions in enumerate(opinion_history):
@@ -260,6 +332,30 @@ def save_sample_opinions(opinion_history, node_personas, filepath):
                 f.write(f"{opinions[node]}\n\n")
     
     print(f"Sample opinions saved to {filepath}")
+
+
+def save_simulation_history(opinion_history, filepath):
+    """Save full simulation history to JSON."""
+    # Convert integer keys to strings for JSON compatibility
+    serializable_history = []
+    for round_data in opinion_history:
+        serializable_history.append({str(k): v for k, v in round_data.items()})
+
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(serializable_history, f, indent=2, ensure_ascii=False)
+    print(f"Full simulation history saved to {filepath}")
+
+
+def load_simulation_history(filepath):
+    """Load simulation history from JSON."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    # Convert keys back to integers
+    history = []
+    for round_data in data:
+        history.append({int(k): v for k, v in round_data.items()})
+    return history
 
 
 def main():
@@ -276,26 +372,35 @@ def main():
         default=None,
         help="API key (or set via environment variable)"
     )
-    
+    parser.add_argument(
+        "--use-cache",
+        action="store_true",
+        help="Use cached simulation results if available"
+    )
+
     args = parser.parse_args()
     
+    # Load environment variables
+    from dotenv import load_dotenv
+    load_dotenv()
+
     # Get API key
-    api_key = args.api_key or API_KEY or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")
-    
+    api_key = args.api_key or API_KEY or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")
+
     if not api_key:
         print("ERROR: No API key provided.")
-        print("Please set via --api-key argument or ANTHROPIC_API_KEY environment variable")
+        print("Please set via --api-key argument or environment variable (e.g., GOOGLE_API_KEY or GEMINI_API_KEY)")
         return
     
     # Run selected mode
     if args.mode == "baseline":
-        run_baseline_simulation(api_key)
+        run_baseline_simulation(api_key, use_cache=args.use_cache)
     elif args.mode == "intervention":
-        run_intervention_study(api_key)
+        run_intervention_study(api_key, use_cache=args.use_cache)
     elif args.mode == "comparison":
-        run_topology_comparison(api_key)
+        run_topology_comparison(api_key, use_cache=args.use_cache)
     elif args.mode == "degroot":
-        run_degroot_comparison(api_key)
+        run_degroot_comparison(api_key, use_cache=args.use_cache)
 
 
 if __name__ == "__main__":

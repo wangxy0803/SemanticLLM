@@ -4,7 +4,12 @@ Network generation module - creates different graph topologies.
 
 import networkx as nx
 import matplotlib.pyplot as plt
-from typing import Tuple
+from typing import Tuple, Dict
+import random
+import os
+import json
+from pathlib import Path
+from config import PERSONA_TEMPLATES
 
 def create_network(network_type: str = "karate", n: int = 30, seed: int = 42) -> nx.Graph:
     """
@@ -72,17 +77,26 @@ def visualize_network(G: nx.Graph, node_personas: dict = None,
             "centrist": "#2ca02c",        # Green
             "moderate_anti": "#1f77b4",   # Blue
             "strong_anti": "#9467bd",     # Purple
-            "contrarian": "#8c564b"       # Brown
+            "contrarian": "#8c564b",      # Brown
+            "unknown": "#808080"          # Gray
         }
         
-        node_colors = [archetype_colors.get(node_personas[node]["archetype"], "#gray") 
-                      for node in G.nodes()]
-        
-        # Create legend
+        # Color nodes by archetype if personas provided and have archetype field
+        node_colors = []
+        for node in G.nodes():
+            persona = node_personas.get(node, {})
+            archetype = persona.get("archetype", "unknown")
+            color = archetype_colors.get(archetype, "#808080")  # Default gray
+            node_colors.append(color)
+
+        # Create legend only for present archetypes
+        present_archetypes = set(node_personas[n].get("archetype", "unknown") for n in G.nodes())
         legend_elements = [
             plt.Line2D([0], [0], marker='o', color='w', 
-                      markerfacecolor=color, markersize=10, label=archetype.replace('_', ' ').title())
-            for archetype, color in archetype_colors.items()
+                      markerfacecolor=color, markersize=10,
+                      label=arch.replace('_', ' ').title())
+            for arch, color in archetype_colors.items()
+            if arch in present_archetypes
         ]
     else:
         node_colors = "#1f77b4"
@@ -134,7 +148,6 @@ def add_disinformation_bot(G: nx.Graph, bot_persona: dict,
         
     elif connection_strategy == "random":
         # Connect to 30% of nodes randomly
-        import random
         n_connections = max(3, int(0.3 * G.number_of_nodes()))
         target_nodes = random.sample(list(G.nodes()), n_connections)
     
@@ -148,6 +161,125 @@ def add_disinformation_bot(G: nx.Graph, bot_persona: dict,
     print(f"Added bot node {bot_id} connected to {len(target_nodes)} nodes")
     
     return G_with_bot, bot_id
+
+
+def assign_personas_balanced(G: nx.Graph, seed: int = 42) -> Dict[int, Dict]:
+    """
+    Assign personas to nodes with balanced distribution.
+
+    Returns dict mapping node_id -> {name, persona_prompt, initial_opinion}
+    """
+    random.seed(seed)
+
+    n = G.number_of_nodes()
+
+    # Define target distribution (percentages)
+    distribution = {
+        "strong_pro": 0.15,      # ~15%
+        "moderate_pro": 0.25,    # ~25%
+        "centrist": 0.25,        # ~25%
+        "moderate_anti": 0.25,   # ~25%
+        "strong_anti": 0.07,     # ~7%
+        "contrarian": 0.03       # ~3%
+    }
+
+    # Build pool of personas
+    persona_pool = []
+    for archetype, percentage in distribution.items():
+        count = max(1, int(n * percentage))  # At least 1 of each type
+        personas = PERSONA_TEMPLATES[archetype]
+
+        # Cycle through available personas in this category
+        for i in range(count):
+            persona = personas[i % len(personas)]
+            persona_pool.append({
+                "archetype": archetype,
+                "name": persona["name"],
+                "persona_prompt": persona["prompt"],
+                "initial_opinion": persona["initial_opinion"]
+            })
+
+    # Trim or extend to exact node count
+    if len(persona_pool) > n:
+        persona_pool = persona_pool[:n]
+    elif len(persona_pool) < n:
+        # Fill remaining with random selection
+        while len(persona_pool) < n:
+            archetype = random.choice(list(PERSONA_TEMPLATES.keys()))
+            persona = random.choice(PERSONA_TEMPLATES[archetype])
+            persona_pool.append({
+                "archetype": archetype,
+                "name": persona["name"],
+                "persona_prompt": persona["prompt"],
+                "initial_opinion": persona["initial_opinion"]
+            })
+
+    # Shuffle and assign
+    random.shuffle(persona_pool)
+
+    node_personas = {}
+    for i, node in enumerate(G.nodes()):
+        node_personas[node] = persona_pool[i]
+
+    return node_personas
+
+
+def print_persona_distribution(node_personas: Dict[int, Dict]):
+    """Print summary of persona distribution."""
+    archetype_counts = {}
+    for persona_data in node_personas.values():
+        archetype = persona_data.get("archetype", "unknown")
+        archetype_counts[archetype] = archetype_counts.get(archetype, 0) + 1
+
+    print("\n=== Persona Distribution ===")
+    for archetype, count in sorted(archetype_counts.items()):
+        print(f"{archetype:20s}: {count:2d} ({100*count/len(node_personas):5.1f}%)")
+    print()
+
+
+def load_generated_personas(G: nx.Graph, persona_dir: str = "prompts/persona") -> Dict[int, Dict]:
+    """
+    Load pre-generated persona JSON files and assign them to graph nodes.
+
+    Args:
+        G: Network graph
+        persona_dir: Directory containing agent_*.json files
+
+    Returns:
+        dict mapping node_id -> persona_data string/dict
+    """
+    persona_path = Path(persona_dir)
+    if not persona_path.exists():
+        raise FileNotFoundError(f"Persona directory not found: {persona_path}")
+
+    # Get all json files
+    persona_files = list(persona_path.glob("agent_*.json"))
+
+    if len(persona_files) < G.number_of_nodes():
+        raise ValueError(f"Not enough persona files ({len(persona_files)}) for network size ({G.number_of_nodes()})")
+
+    # Sort to ensure deterministic assignment if needed, or shuffle
+    persona_files.sort()
+    # random.shuffle(persona_files) # Optional: shuffle if you want random assignment
+
+    node_personas = {}
+    for i, node in enumerate(G.nodes()):
+        with open(persona_files[i], 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # Ensure name exists for visualization/logging
+            if "name" not in data:
+                data["name"] = f"Agent {data.get('agent_id', i)}"
+
+            # Ensure initial_opinion exists (generate placeholder if missing)
+            if "initial_opinion" not in data:
+                # Use recent_memory or cognition as a fallback starter thought
+                memory = data.get("Current_State", {}).get("recent_memory", "")
+                core_val = data.get("Cognition", {}).get("core_value", "")
+                data["initial_opinion"] = f"{core_val} {memory}".strip() or "I have no opinion yet."
+
+            node_personas[node] = data
+
+    return node_personas
 
 
 def print_network_stats(G: nx.Graph):

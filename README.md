@@ -27,8 +27,9 @@ Can LLM agents capture semantic nuances of polarization (framing, rhetoric, logi
 
 ```
 ├── config.py                    # Configuration & persona definitions
-├── network_generation.py        # Graph creation & visualization
-├── persona_assignment.py        # Assign personas to nodes
+├── network_generation.py        # Graph creation, persona loading & visualization
+├── persona_agent.py             # Agent Logic (GraphPersonaNode)
+├── persona_generation.py        # Multi-threaded persona generator
 ├── simulation.py               # Core LLM simulation engine
 ├── measurement.py              # Semantic embedding analysis
 ├── main.py                     # Orchestration script
@@ -52,6 +53,11 @@ pip install -r requirements.txt
 ```bash
 # For Anthropic (Claude)
 export ANTHROPIC_API_KEY="your-key-here"
+
+# For Google Gemini
+export GEMINI_API_KEY="your-key-here"
+# Or update .env file
+
 ```
 
 ### 3. Run Baseline Simulation
@@ -120,21 +126,25 @@ Compares LLM semantic dynamics with classical DeGroot model.
 
 ## 🎭 Persona Design
 
-We define 6 persona archetypes on the "AI Regulation" controversy:
+Instead of using fixed templates, we now **dynamically generate unique personas** using LLMs seeded with sociological data. Each agent in the network has a distinct psychological profile comprising four modules:
 
-| Archetype | Description | Example |
-|-----------|-------------|---------|
-| **Strong Pro** | Safety-focused, urgent regulation needed | Tech ethicist, AI safety researcher |
-| **Moderate Pro** | Supports targeted regulation, worries about overreach | Software engineer, professor |
-| **Centrist** | Genuinely undecided, highly persuadable | Policy analyst, journalist |
-| **Moderate Anti** | Worries regulation will hurt small players | Startup founder, open-source advocate |
-| **Strong Anti** | Free markets only, government is incompetent | Libertarian, accelerationist |
-| **Contrarian** | Reflexively opposes consensus | Devil's advocate |
+1.  **Background (Demographics)**
+    *   *Age & Generation* (e.g., "24 years old, Gen Z")
+    *   *Occupation & Social Class* (e.g., "Retail Worker, Working Class")
+    *   *Key Experience*: A defining life event that shapes their worldview.
 
-Each persona includes:
-- **Background & Values:** Grounds the agent's perspective
-- **Reasoning Style:** Evidence-based, emotional, ideological, etc.
-- **Persuadability:** How easily swayed by neighbors
+2.  **Personality (Big Five)**
+    *   Dominant traits selected from the Big Five model (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism) based on the persona seed.
+
+3.  **Cognition (Values & Biases)**
+    *   *Core Values*: Fundamental beliefs driving their decisions.
+    *   *Cognitive Biases*: Specific logical fallacies or tendencies (e.g., "Bandwagon Effect", "Confirmation Bias") that influence how they process information.
+
+4.  **Current State**
+    *   *Recent Memory*: A mundane, relatable recent event (e.g., "Dropped my AirPods on the subway").
+    *   *Emotion*: The agent's current mood, which colors their responses.
+
+This structure allows for highly realistic and diverse interactions, as agents reason based on their unique combination of background and psychology rather than simple "Pro/Anti" labels.
 
 ---
 
@@ -169,8 +179,8 @@ Edit `config.py` to customize:
 
 ```python
 # API Settings
-API_PROVIDER = "anthropic"  # or "openai"
-API_MODEL = "claude-sonnet-4-20250514"
+API_PROVIDER = "gemini"  # "gemini" or "anthropic" 
+API_MODEL = "gemini-2.0-flash" 
 
 # Network Settings
 NETWORK_SIZE = 30
@@ -180,7 +190,5 @@ SIMULATION_ROUNDS = 8
 # Topic
 CONTROVERSIAL_TOPIC = "AI Regulation"
 ```
-
----
 
 

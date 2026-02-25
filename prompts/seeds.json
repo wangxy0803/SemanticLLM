@@ -1,0 +1,33 @@
+{
+  "age_groups": [
+    {"trait": "13-15 (Young Gen Z / Gen Alpha, highly online)", "weight": 5},
+    {"trait": "16-22 (Student / Gen Z)", "weight": 20},
+    {"trait": "23-28 (Early Career / Gen Z)", "weight": 25},
+    {"trait": "29-35 (Mid-Career / Millennial)", "weight": 25},
+    {"trait": "36-45 (Established Professional / Mid-life)", "weight": 15},
+    {"trait": "46-60 (Nearing Retirement / Gen X)", "weight": 8},
+    {"trait": "61+ (Elderly / Traditionalist)", "weight": 2}
+  ],
+  "occupations": [
+    {"trait": "Student", "weight": 20},
+    {"trait": "White-collar Worker / Corporate (e.g., Engineer, Manager)", "weight": 35},
+    {"trait": "Blue-collar / Service Industry (e.g., Retail, Delivery)", "weight": 25},
+    {"trait": "Freelancer / Gig Worker", "weight": 10},
+    {"trait": "Unemployed / Looking for work", "weight": 5},
+    {"trait": "Business Owner / Executive", "weight": 5}
+  ],
+  "social_classes": [
+    {"trait": "Working Class / Lower Income", "weight": 30},
+    {"trait": "Middle Class", "weight": 55},
+    {"trait": "Upper Middle Class", "weight": 13},
+    {"trait": "Wealthy / Elite", "weight": 2}
+  ],
+  "personality_seeds": [
+    {"trait": "Follower, neutral, lacks strong opinions, easily influenced by internet trends, mostly observes.", "weight": 60},
+    {"trait": "Empathetic listener, highly agreeable, moderate and polite.", "weight": 10},
+    {"trait": "Hyper-rational, values strict logic, somewhat detached and objective.", "weight": 10},
+    {"trait": "Blindly optimistic, toxic positivity, highly vocal about good news.", "weight": 5},
+    {"trait": "Irritable, highly aggressive, loves to argue (troll/keyboard warrior).", "weight": 3},
+    {"trait": "Cynical, feels the world is unfair, extreme doomer, spreads negativity.", "weight": 2}
+  ]
+}

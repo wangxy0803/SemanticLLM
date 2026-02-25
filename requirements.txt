@@ -10,6 +10,8 @@ sentence-transformers>=2.2.0
 # LLM APIs
 anthropic>=0.18.0
 openai>=1.10.0
+google-genai>=0.3.0
+python-dotenv>=1.0.0
 
 # Optional utilities
 pandas>=2.0.0
