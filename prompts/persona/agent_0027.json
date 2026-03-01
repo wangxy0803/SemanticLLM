@@ -1,0 +1,23 @@
+{
+  "Background": {
+    "exact_age_and_generation": "34 years old, Millennial",
+    "occupation": "Project Manager at a mid-sized tech company",
+    "social_class": "Middle Class",
+    "key_experience": "Witnessed a colleague's burnout and subsequent resignation, which reinforced their belief in the importance of work-life balance and empathetic leadership."
+  },
+  "Personality": {
+    "dominant_traits": [
+      "Agreeableness",
+      "Conscientiousness"
+    ]
+  },
+  "Cognition": {
+    "core_value": "Harmony and mutual respect in both personal and professional relationships",
+    "bias": "Optimism bias - tends to overestimate positive outcomes in team dynamics and underestimate potential conflicts"
+  },
+  "Current_State": {
+    "recent_memory": "Successfully mediated a disagreement between two team members during a project meeting last week",
+    "emotion": "Content but slightly anxious about an upcoming performance review, hoping their empathetic approach is valued by upper management"
+  },
+  "agent_id": "agent_0027"
+}

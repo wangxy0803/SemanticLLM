@@ -26,14 +26,22 @@ Can LLM agents capture semantic nuances of polarization (framing, rhetoric, logi
 ## 📁 Project Structure
 
 ```
-├── config.py                    # Configuration & persona definitions
+.
+├── config.py                    # Configuration & static persona templates
+├── persona_generation.py        # LLM-based persona generator
+├── persona_agent.py             # Agent class with memory
 ├── network_generation.py        # Graph creation & visualization
-├── persona_assignment.py        # Assign personas to nodes
-├── simulation.py               # Core LLM simulation engine
-├── measurement.py              # Semantic embedding analysis
-├── main.py                     # Orchestration script
-├── requirements.txt            # Dependencies
-└── README.md                   # This file
+├── simulation.py                # Parallel simulation engine
+├── measurement.py               # Semantic analysis (SBERT)
+├── main.py                      # Orchestration script
+├── requirements.txt             # Dependencies
+├── .env                         # API keys (create this)
+└── prompts/
+    ├── seeds.json               # Weighted trait pools
+    └── persona/                 # Generated persona JSONs
+        ├── agent_0000.json
+        ├── agent_0001.json
+        └── ...
 ```
 
 ---
@@ -50,8 +58,8 @@ pip install -r requirements.txt
 
 
 ```bash
-# For Anthropic (Claude)
-export ANTHROPIC_API_KEY="your-key-here"
+# For Deepseek
+export DEEPSEEK_API_KEY="your-key-here"
 ```
 
 ### 3. Run Baseline Simulation
@@ -81,17 +89,18 @@ python main.py --mode baseline
 ![Network Structure](outputs/network_structure.png)
 
 - `semantic_variance.png` - Variance over time
-![Network Structure](outputs/semantic_variance.png)
+![Semantic Variance](outputs/semantic_variance.png)
 
 - `sample_opinions.txt` - Opinion trajectories for 3 agents
 
-## 🧪 Experiment Modes (To Do)
 ### 2. Bot Intervention Study
 ```bash
 python main.py --mode intervention
 ```
 Tests network resilience by adding a high-degree "disinformation bot" node.
-
+**Outputs:**
+- `intervention_comparison.png` - Intervention Comparison
+![Intervention Comparison](outputs/intervention_comparison.png)
 
 
 ### 3. Topology Comparison
@@ -99,6 +108,9 @@ Tests network resilience by adding a high-degree "disinformation bot" node.
 python main.py --mode comparison
 ```
 Compares Scale-free, Small-world, and Random networks.
+**Outputs:**
+- `topology_comparison.png` - Topology Comparison
+![Topology Comparison](outputs/topology_comparison.png)
 
 
 
@@ -107,28 +119,34 @@ Compares Scale-free, Small-world, and Random networks.
 python main.py --mode degroot
 ```
 Compares LLM semantic dynamics with classical DeGroot model.
-
+**Outputs:**
+- `llm_vs_degroot.png` - LLM VS Degroot Comparison
+![Degroot Comparison](outputs/llm_vs_degroot.png)
 
 
 ---
 
 ## 🎭 Persona Design
 
-We define 6 persona archetypes on the "AI Regulation" controversy:
+Instead of using fixed templates, we now **dynamically generate unique personas** using LLMs seeded with sociological data. Each agent in the network has a distinct psychological profile comprising four modules:
 
-| Archetype | Description | Example |
-|-----------|-------------|---------|
-| **Strong Pro** | Safety-focused, urgent regulation needed | Tech ethicist, AI safety researcher |
-| **Moderate Pro** | Supports targeted regulation, worries about overreach | Software engineer, professor |
-| **Centrist** | Genuinely undecided, highly persuadable | Policy analyst, journalist |
-| **Moderate Anti** | Worries regulation will hurt small players | Startup founder, open-source advocate |
-| **Strong Anti** | Free markets only, government is incompetent | Libertarian, accelerationist |
-| **Contrarian** | Reflexively opposes consensus | Devil's advocate |
+1.  **Background (Demographics)**
+    *   *Age & Generation* (e.g., "24 years old, Gen Z")
+    *   *Occupation & Social Class* (e.g., "Retail Worker, Working Class")
+    *   *Key Experience*: A defining life event that shapes their worldview.
 
-Each persona includes:
-- **Background & Values:** Grounds the agent's perspective
-- **Reasoning Style:** Evidence-based, emotional, ideological, etc.
-- **Persuadability:** How easily swayed by neighbors
+2.  **Personality (Big Five)**
+    *   Dominant traits selected from the Big Five model (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism) based on the persona seed.
+
+3.  **Cognition (Values & Biases)**
+    *   *Core Values*: Fundamental beliefs driving their decisions.
+    *   *Cognitive Biases*: Specific logical fallacies or tendencies (e.g., "Bandwagon Effect", "Confirmation Bias") that influence how they process information.
+
+4.  **Current State**
+    *   *Recent Memory*: A mundane, relatable recent event (e.g., "Dropped my AirPods on the subway").
+    *   *Emotion*: The agent's current mood, which colors their responses.
+
+This structure allows for highly realistic and diverse interactions, as agents reason based on their unique combination of background and psychology rather than simple "Pro/Anti" labels.
 
 ---
 
@@ -163,8 +181,8 @@ Edit `config.py` to customize:
 
 ```python
 # API Settings
-API_PROVIDER = "anthropic"  # or "openai"
-API_MODEL = "claude-sonnet-4-20250514"
+API_PROVIDER = "gemini"  # "gemini" or "anthropic" 
+API_MODEL = "gemini-2.0-flash" 
 
 # Network Settings
 NETWORK_SIZE = 30
@@ -174,7 +192,5 @@ SIMULATION_ROUNDS = 8
 # Topic
 CONTROVERSIAL_TOPIC = "AI Regulation"
 ```
-
----
 
 

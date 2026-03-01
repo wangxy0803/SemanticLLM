@@ -40,7 +40,7 @@ from measurement import (
 # Helper Functions
 # ============================================================================
 
-def setup_output_directory() -> Path:
+def setup_output_directory():
     """Create output directory for results."""
     output_dir = Path("./outputs")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -160,12 +160,6 @@ def run_baseline_simulation(api_key: str = None, use_cache: bool = False):
     plot_path = output_dir / "semantic_variance.png"
     plot_semantic_variance(analysis, save_path=str(plot_path))
     
-    drift_plot_path = output_dir / "topic_drift.png"
-    plot_topic_drift(analysis, save_path=str(drift_plot_path))
-
-    hostility_plot_path = output_dir / "hostility_trend.png"
-    plot_hostility_trend(analysis, save_path=str(hostility_plot_path))
-
     # 7. Save sample opinions
     save_sample_opinions(opinion_history, node_personas, output_dir / "sample_opinions.txt")
     
@@ -336,27 +330,8 @@ def run_topology_comparison(api_key: str = None, use_cache: bool = False):
     
     print(f"\n✓ Results saved to {output_dir}")
 
-    plt.figure(figsize=(12, 6))
-    for topology, analysis in results.items():
-        if "topic_drifts" in analysis:
-            rounds = range(len(analysis["topic_drifts"]))
-            plt.plot(rounds, analysis["topic_drifts"],
-                    marker='^', linewidth=2, label=topology.replace('_', ' ').title())
-    
-    plt.xlabel("Simulation Round", fontsize=12)
-    plt.ylabel("Semantic Distance to Original Topic", fontsize=12)
-    plt.title("Network Topology Impact on Topic Drift", fontsize=14, fontweight='bold')
-    plt.legend(fontsize=11)
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    
-    drift_plot_path = output_dir / "topology_topic_drift.png"
-    plt.savefig(drift_plot_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    print(f"Topology drift plot saved to {drift_plot_path}")
 
-
-def run_degroot_comparison(api_key: str = None, use_cache: bool = False):
+def run_degroot_comparison(api_key: str = None):
     """
     Compare LLM simulation with classical DeGroot model.
     """
