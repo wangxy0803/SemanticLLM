@@ -91,6 +91,12 @@ python main.py --mode baseline
 - `semantic_variance.png` - Variance over time
 ![Semantic Variance](outputs/semantic_variance.png)
 
+- `topic_drift.png` - Topic drift (semantic shift) over time
+![Topic Drift](outputs/topic_drift.png)
+
+- `hostility_trend.png` - Network hostility (negative sentiment) over time
+![Hostility_Trend](outputs/hostility_trend.png)
+
 - `sample_opinions.txt` - Opinion trajectories for 3 agents
 
 ### 2. Bot Intervention Study
@@ -102,6 +108,12 @@ Tests network resilience by adding a high-degree "disinformation bot" node.
 - `intervention_comparison.png` - Intervention Comparison
 ![Intervention Comparison](outputs/intervention_comparison.png)
 
+- `intervention_topic_drift.png` - Topic drift with intervention over time
+![Topic Drift](outputs/intervention_topic_drift.png)
+
+- `intervention_hostility_trend.png` - Network hostility with intervention over time
+![Hostility_Trend](outputs/intervention_hostility.png)
+
 
 ### 3. Topology Comparison
 ```bash
@@ -111,7 +123,8 @@ Compares Scale-free, Small-world, and Random networks.
 **Outputs:**
 - `topology_comparison.png` - Topology Comparison
 ![Topology Comparison](outputs/topology_comparison.png)
-
+- `topology_topic_drift.png` - Network topology impact on topic drift
+![Topic Drift](outputs/topology_topic_drift.png)
 
 
 ### 4. DeGroot Comparison
@@ -160,6 +173,27 @@ This structure allows for highly realistic and diverse interactions, as agents r
 **Interpretation:**
 - **Increasing variance** → Polarization (agents diverging)
 - **Decreasing variance** → Convergence (agents agreeing)
+
+### Topic Drift (Semantic Shift)
+
+1. Encode the original controversial topic (initial prompt) using SBERT.
+2. Encode all opinion texts generated in the current round.
+3. Compute the mean cosine distance between the agents' opinions and the original topic vector.
+
+Interpretation:
+* **Increasing drift** → Semantic shift / Distraction (agents are changing the subject, attacking each other, or moving away from the core prompt).
+* **Stable/Low drift** → The network remains highly focused on the initial topic.
+* *Note: Classical scalar models cannot capture this phenomenon, making this a unique advantage of LLM agents.*
+
+### Network Hostility (Sentiment & Toxicity)
+
+1. Analyze all opinion texts using the VADER (Valence Aware Dictionary and sEntiment Reasoner) sentiment analysis tool.
+2. Extract the negative sentiment score (`neg` polarity) for each agent's generated text.
+3. **Hostility Index** = Mean of the negative scores across all agents in the network.
+
+Interpretation:
+* **Increasing hostility** → Escalation of emotional contagion and toxicity (the discussion is devolving into anger or aggressiveness).
+* **Low hostility** → Rational and calm discussion.
 
 ### DeGroot Baseline
 Map personas to scalars:
