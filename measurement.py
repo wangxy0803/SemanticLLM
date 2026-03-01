@@ -1,5 +1,6 @@
 """
 Measurement module - computes semantic variance using sentence embeddings.
+Uses SBERT for local embedding generation (no external API needed).
 """
 
 import numpy as np

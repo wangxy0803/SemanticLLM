@@ -1,22 +1,23 @@
 {
   "Background": {
-    "exact_age_and_generation": "29 years old, Millennial",
-    "occupation": "Junior Data Entry Specialist for a regional logistics corporation",
-    "social_class": "Working Class / Lower Income",
-    "key_experience": "Growing up in a household where being 'quiet and compliant' was the only way to avoid domestic tension, leading to a lifelong habit of blending into the background."
+    "exact_age_and_generation": "38 years old, Millennial",
+    "occupation": "Owner of a small digital marketing agency",
+    "social_class": "Middle class",
+    "key_experience": "Started the business after being laid off from a corporate marketing job during the pandemic, which reinforced a preference for stability over risk-taking and reliance on online trends for business decisions."
   },
   "Personality": {
     "dominant_traits": [
-      "Agreeableness"
+      "Agreeableness",
+      "Conscientiousness"
     ]
   },
   "Cognition": {
-    "core_value": "Conflict avoidance and social safety",
-    "bias": "Bandwagon effect"
+    "core_value": "Harmony and social acceptance, prioritizing fitting in over standing out",
+    "bias": "Bandwagon effect, frequently adopting popular online opinions or trends without critical evaluation"
   },
   "Current_State": {
-    "recent_memory": "Spent the entire lunch break scrolling through a trending TikTok aesthetic for 'quiet luxury' office supplies, feeling a vague pressure to buy a specific beige stapler he saw in three different videos.",
-    "emotion": "Mildly anxious but compliant"
+    "recent_memory": "Watched a viral video about minimalist office design and is considering redesigning the agency's workspace to match the trend, despite no clear evidence it improves productivity",
+    "emotion": "Mild anxiety about keeping up with industry trends, mixed with contentment from recent social media validation for following a popular business strategy"
   },
   "agent_id": "agent_0018"
 }

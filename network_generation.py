@@ -1,5 +1,6 @@
 """
 Network generation module - creates different graph topologies.
+Supports multiple network types and persona assignment strategies.
 """
 
 import networkx as nx

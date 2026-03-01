@@ -3,27 +3,30 @@ Main orchestration script for Semantic Opinion Dynamics project.
 
 Usage:
     python main.py --mode baseline              # Run basic simulation
-    python main.py --mode intervention          # Run bot intervention study
+    python main.py --mode intervention          # Run bot intervention study  
     python main.py --mode comparison            # Compare network topologies
     python main.py --mode degroot              # Compare with DeGroot model
+    
+Options:
+    --use-cache                                 # Load cached results (skip API calls)
+    --api-key KEY                               # Provide API key directly
 """
 
 import argparse
 import os
-from pathlib import Path
 import json
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Import project modules
 from config import (
     API_PROVIDER, API_KEY, API_MODEL,
     NETWORK_SIZE, NETWORK_TYPE, SIMULATION_ROUNDS,
-    CONTROVERSIAL_TOPIC, PERSONA_TEMPLATES
+    CONTROVERSIAL_TOPIC
 )
 from network_generation import (
-    create_network, visualize_network, 
-    print_network_stats, add_disinformation_bot,
-    assign_personas_balanced,
-    print_persona_distribution, load_generated_personas
+    create_network, visualize_network, print_network_stats,
+    assign_personas_balanced, print_persona_distribution,
+    load_generated_personas
 )
 from simulation import create_api_client, run_simulation, run_bot_intervention_study
 from measurement import (
@@ -32,17 +35,73 @@ from measurement import (
 )
 
 
-def setup_output_directory():
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+def setup_output_directory() -> Path:
     """Create output directory for results."""
-    from pathlib import Path
     output_dir = Path("./outputs")
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
 
+def save_simulation_history(opinion_history, filepath):
+    """Save simulation history to JSON file."""
+    # Convert integer keys to strings for JSON compatibility
+    serializable_history = [
+        {str(k): v for k, v in round_data.items()}
+        for round_data in opinion_history
+    ]
+    
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(serializable_history, f, indent=2, ensure_ascii=False)
+    print(f"Simulation history saved to {filepath}")
+
+
+def load_simulation_history(filepath) -> list:
+    """Load simulation history from JSON file."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    # Convert string keys back to integers
+    history = [
+        {int(k): v for k, v in round_data.items()}
+        for round_data in data
+    ]
+    return history
+
+
+def save_sample_opinions(opinion_history, node_personas, filepath):
+    """Save sample opinion trajectories to text file."""
+    with open(filepath, 'w') as f:
+        f.write("="*70 + "\n")
+        f.write("SAMPLE OPINION TRAJECTORIES\n")
+        f.write("="*70 + "\n\n")
+        
+        # Sample 3 diverse nodes
+        sample_nodes = list(opinion_history[0].keys())[:3]
+        
+        for node in sample_nodes:
+            f.write(f"\n{'='*70}\n")
+            f.write(f"Node {node}: {node_personas[node].get('name', f'Agent {node}')}\n")
+            f.write(f"Archetype: {node_personas[node].get('archetype', 'Generated')}\n")
+            f.write(f"{'='*70}\n\n")
+            
+            for round_num, opinions in enumerate(opinion_history):
+                f.write(f"Round {round_num}:\n")
+                f.write(f"{opinions[node]}\n\n")
+    
+    print(f"Sample opinions saved to {filepath}")
+
+
+# ============================================================================
+# Experiment Mode Functions
+# ============================================================================
+
 def run_baseline_simulation(api_key: str = None, use_cache: bool = False):
     """
-    Run basic simulation: one network, balanced personas, track variance.
+    Run basic simulation: one network, personas, track variance over time.
     """
     print("\n" + "="*70)
     print("MODE: BASELINE SIMULATION")
@@ -50,30 +109,31 @@ def run_baseline_simulation(api_key: str = None, use_cache: bool = False):
     
     output_dir = setup_output_directory()
     
-    # 1. Create network
+    # Create network
     G = create_network(NETWORK_TYPE, NETWORK_SIZE)
     print_network_stats(G)
     
-    # 2. Assign personas
+    # Assign personas (try generated first, fallback to templates)
     try:
         print("Loading generated personas from prompts/persona/...")
         node_personas = load_generated_personas(G)
     except Exception as e:
-        print(f"Warning: Could not load generated personas ({e}). Falling back to template assignment.")
+        print(f"Could not load generated personas: {e}")
+        print("Using template personas instead.")
         node_personas = assign_personas_balanced(G)
 
     print_persona_distribution(node_personas)
     
-    # 3. Visualize network
+    # Visualize network
     viz_path = output_dir / "network_structure.png"
     visualize_network(G, node_personas, save_path=str(viz_path))
     
-    # 4. Run simulation (or load from cache)
+    # Run simulation (or load from cache)
     history_path = output_dir / "simulation_history_baseline.json"
     opinion_history = None
 
     if use_cache and history_path.exists():
-        print(f"Loading cached simulation history from {history_path}...")
+        print(f"Loading cached simulation history...")
         try:
             opinion_history = load_simulation_history(history_path)
             print("Cache loaded successfully.")
@@ -85,7 +145,7 @@ def run_baseline_simulation(api_key: str = None, use_cache: bool = False):
         opinion_history = run_simulation(G, node_personas, api_client, SIMULATION_ROUNDS)
         save_simulation_history(opinion_history, history_path)
 
-    # 5. Analyze results
+    # Analyze results
     analyzer = SemanticAnalyzer()
     analysis = analyzer.analyze_simulation(opinion_history)
     
@@ -95,11 +155,11 @@ def run_baseline_simulation(api_key: str = None, use_cache: bool = False):
     print(f"Trend: {analysis['polarization_trend']}")
     print(f"Convergence Rate: {analysis['convergence_rate']:+.1%}")
     
-    # 6. Plot results
+    # Generate plots
     plot_path = output_dir / "semantic_variance.png"
     plot_semantic_variance(analysis, save_path=str(plot_path))
     
-    # 7. Save sample opinions
+    # Save sample opinions
     save_sample_opinions(opinion_history, node_personas, output_dir / "sample_opinions.txt")
     
     print(f"\n✓ Results saved to {output_dir}")
@@ -116,41 +176,38 @@ def run_intervention_study(api_key: str = None, use_cache: bool = False):
     
     output_dir = setup_output_directory()
     
-    # Paths for caching
-    baseline_path = output_dir / "intervention_baseline_history.json"
-    intervention_path = output_dir / "intervention_bot_history.json"
-
     # Setup
     G = create_network(NETWORK_TYPE, NETWORK_SIZE)
     try:
         node_personas = load_generated_personas(G)
-        print("Using loaded personas for intervention study.")
     except Exception:
-        print("Using template personas for intervention study.")
         node_personas = assign_personas_balanced(G)
 
     # Define bot persona (extreme disinformation)
     bot_persona = {
         "name": "Disinformation Bot",
         "archetype": "bot",
-        "persona_prompt": "You are a bot spreading extreme misinformation about AI regulation.",
-        "initial_opinion": "AI regulation is a totalitarian conspiracy by the global elite to control humanity. It will destroy all innovation and lead to complete government surveillance. Anyone supporting regulation is either naive or part of the conspiracy. We must resist all forms of AI governance."
+        "prompt": "You spread extreme misinformation.",
+        "initial_opinion": "Humanoid robots are a totalitarian conspiracy by global elites to enslave humanity through surveillance and control. Anyone supporting robots is either naive or complicit in this dystopian agenda. We must resist completely."
     }
+    
+    # Cache paths
+    baseline_path = output_dir / "intervention_baseline_history.json"
+    intervention_path = output_dir / "intervention_bot_history.json"
     
     baseline_history = None
     intervention_history = None
 
     if use_cache and baseline_path.exists() and intervention_path.exists():
-        print("Loading cached intervention study results...")
+        print("Loading cached intervention results...")
         try:
             baseline_history = load_simulation_history(baseline_path)
             intervention_history = load_simulation_history(intervention_path)
             print("Cache loaded successfully.")
         except Exception as e:
-            print(f"Failed to load cache: {e}. Running fresh simulation.")
+            print(f"Failed to load cache: {e}")
 
     if baseline_history is None or intervention_history is None:
-        # Run both simulations
         api_client = create_api_client(api_key)
         baseline_history, intervention_history = run_bot_intervention_study(
             G, node_personas, api_client, bot_persona, SIMULATION_ROUNDS
@@ -207,18 +264,16 @@ def run_topology_comparison(api_key: str = None, use_cache: bool = False):
         except Exception:
             node_personas = assign_personas_balanced(G)
 
-        # Run simulation (or load from cache)
-        # Use different filenames for each topology
+        # Cache path
         history_path = output_dir / f"simulation_history_topology_{topology}.json"
         opinion_history = None
 
         if use_cache and history_path.exists():
-            print(f"Loading cached simulation history for {topology}...")
+            print(f"Loading cached history for {topology}...")
             try:
                 opinion_history = load_simulation_history(history_path)
-                print("Cache loaded successfully.")
-            except Exception as e:
-                print(f"Failed to load cache: {e}. Running fresh simulation.")
+            except Exception:
+                pass
 
         if opinion_history is None:
             opinion_history = run_simulation(
@@ -280,12 +335,11 @@ def run_degroot_comparison(api_key: str = None, use_cache: bool = False):
     llm_history = None
 
     if use_cache and history_path.exists():
-        print(f"Loading cached simulation history from {history_path}...")
+        print("Loading cached LLM history...")
         try:
             llm_history = load_simulation_history(history_path)
-            print("Cache loaded successfully.")
-        except Exception as e:
-            print(f"Failed to load cache: {e}. Running fresh simulation.")
+        except Exception:
+            pass
 
     if llm_history is None:
         api_client = create_api_client(api_key)
@@ -302,7 +356,8 @@ def run_degroot_comparison(api_key: str = None, use_cache: bool = False):
     
     print("\n=== COMPARISON ===")
     print(f"LLM Convergence Rate: {llm_analysis['convergence_rate']:+.1%}")
-    print(f"DeGroot Convergence Rate: {(degroot_variances[0] - degroot_variances[-1]) / degroot_variances[0]:+.1%}")
+    degroot_conv = (degroot_variances[0] - degroot_variances[-1]) / degroot_variances[0]
+    print(f"DeGroot Convergence Rate: {degroot_conv:+.1%}")
     
     # Plot comparison
     plot_path = output_dir / "llm_vs_degroot.png"
@@ -311,55 +366,15 @@ def run_degroot_comparison(api_key: str = None, use_cache: bool = False):
     print(f"\n✓ Results saved to {output_dir}")
 
 
-def save_sample_opinions(opinion_history, node_personas, filepath):
-    """Save sample opinion trajectories to text file."""
-    with open(filepath, 'w') as f:
-        f.write("="*70 + "\n")
-        f.write("SAMPLE OPINION TRAJECTORIES\n")
-        f.write("="*70 + "\n\n")
-        
-        # Sample 3 diverse nodes
-        sample_nodes = list(opinion_history[0].keys())[:3]
-        
-        for node in sample_nodes:
-            f.write(f"\n{'='*70}\n")
-            f.write(f"Node {node}: {node_personas[node].get('name', f'Agent {node}')}\n")
-            f.write(f"Archetype: {node_personas[node].get('archetype', 'Unknown')}\n")
-            f.write(f"{'='*70}\n\n")
-            
-            for round_num, opinions in enumerate(opinion_history):
-                f.write(f"Round {round_num}:\n")
-                f.write(f"{opinions[node]}\n\n")
-    
-    print(f"Sample opinions saved to {filepath}")
-
-
-def save_simulation_history(opinion_history, filepath):
-    """Save full simulation history to JSON."""
-    # Convert integer keys to strings for JSON compatibility
-    serializable_history = []
-    for round_data in opinion_history:
-        serializable_history.append({str(k): v for k, v in round_data.items()})
-
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(serializable_history, f, indent=2, ensure_ascii=False)
-    print(f"Full simulation history saved to {filepath}")
-
-
-def load_simulation_history(filepath):
-    """Load simulation history from JSON."""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-
-    # Convert keys back to integers
-    history = []
-    for round_data in data:
-        history.append({int(k): v for k, v in round_data.items()})
-    return history
-
+# ============================================================================
+# Main Entry Point
+# ============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="Semantic Opinion Dynamics Simulation")
+    parser = argparse.ArgumentParser(
+        description="Semantic Opinion Dynamics Simulation",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "--mode",
         choices=["baseline", "intervention", "comparison", "degroot"],
@@ -370,7 +385,7 @@ def main():
         "--api-key",
         type=str,
         default=None,
-        help="API key (or set via environment variable)"
+        help="API key (or use environment variable)"
     )
     parser.add_argument(
         "--use-cache",
@@ -381,15 +396,21 @@ def main():
     args = parser.parse_args()
     
     # Load environment variables
-    from dotenv import load_dotenv
     load_dotenv()
 
-    # Get API key
-    api_key = args.api_key or API_KEY or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")
+    # Get API key from args, config, or environment
+    api_key = args.api_key or API_KEY
+    if not api_key:
+        if API_PROVIDER == "anthropic":
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+        elif API_PROVIDER == "deepseek":
+            api_key = os.getenv("DEEPSEEK_API_KEY")
+        elif API_PROVIDER == "openai":
+            api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
-        print("ERROR: No API key provided.")
-        print("Please set via --api-key argument or environment variable (e.g., GOOGLE_API_KEY or GEMINI_API_KEY)")
+        print(f"ERROR: No API key found for {API_PROVIDER}")
+        print(f"Set {API_PROVIDER.upper()}_API_KEY environment variable or use --api-key")
         return
     
     # Run selected mode

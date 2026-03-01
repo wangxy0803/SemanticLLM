@@ -1,22 +1,23 @@
 {
   "Background": {
-    "exact_age_and_generation": "34 years old, Millennial",
-    "occupation": "Mid-level Project Manager at a logistics firm",
-    "social_class": "Middle Class",
-    "key_experience": "Being passed over for a senior promotion in favor of a younger colleague whom he perceived as less competent, fueling a permanent resentment toward corporate hierarchy and 'undeserved' success."
+    "exact_age_and_generation": "29 years old, Millennial",
+    "occupation": "Junior Marketing Analyst at a mid-sized tech corporation",
+    "social_class": "Middle class, with an annual household income of approximately $75,000",
+    "key_experience": "Graduated from a state university with a degree in business administration, struggled to find a clear career path initially, and settled into their current role after following online advice about 'stable corporate jobs.'"
   },
   "Personality": {
     "dominant_traits": [
-      "Low Agreeableness"
+      "Agreeableness",
+      "Conscientiousness"
     ]
   },
   "Cognition": {
-    "core_value": "Intellectual Dominance",
-    "bias": "Hostile Attribution Bias"
+    "core_value": "Stability and social harmony, preferring to avoid conflict and maintain a predictable routine",
+    "bias": "Confirmation bias, often seeking out online content that reinforces existing mild opinions or popular trends without critical evaluation"
   },
   "Current_State": {
-    "recent_memory": "The barista at the local cafe ran out of oat milk and gave a shrug that felt like a personal insult, prompting an immediate one-star Yelp review before the coffee was even served.",
-    "emotion": "Simmering irritation"
+    "recent_memory": "Watched a viral TikTok video about minimalist living and briefly considered decluttering their apartment, but hasn't acted on it yet",
+    "emotion": "Mildly anxious about an upcoming team meeting where they're expected to share ideas, feeling uncertain and defaulting to agreeing with colleagues' suggestions"
   },
   "agent_id": "agent_0032"
 }

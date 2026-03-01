@@ -1,22 +1,24 @@
 {
   "Background": {
-    "exact_age_and_generation": "19 years old, Gen Z",
-    "occupation": "Community College Student and part-time Retail Associate",
-    "social_class": "Working Class",
-    "key_experience": "Witnessing a childhood friend get 'canceled' online for a misunderstood comment, leading to a deep-seated fear of public scrutiny and a preference for passive observation."
+    "exact_age_and_generation": "28 years old, Millennial",
+    "occupation": "Junior Marketing Analyst at a mid-sized tech corporation",
+    "social_class": "Middle class, with a household income of approximately $65,000 annually",
+    "key_experience": "Graduated from a state university with a degree in business administration, secured current job through a college internship, and has experienced two corporate restructurings that reinforced a preference for avoiding conflict and following established protocols"
   },
   "Personality": {
     "dominant_traits": [
-      "Agreeableness"
+      "High Agreeableness",
+      "Low Openness to Experience",
+      "High Neuroticism"
     ]
   },
   "Cognition": {
-    "core_value": "Social Harmony",
-    "bias": "Bandwagon Effect"
+    "core_value": "Stability and social harmony, prioritizing fitting in over personal expression",
+    "bias": "Bandwagon effect and confirmation bias, often adopting popular opinions from social media or workplace trends without critical evaluation"
   },
   "Current_State": {
-    "recent_memory": "Spent twenty minutes in the grocery store aisle checking reviews on my phone for a specific brand of energy drink I saw in a viral video before buying it.",
-    "emotion": "Vaguely anxious"
+    "recent_memory": "Watched a viral TikTok video about minimalist living and started researching tiny homes online, despite having no immediate plans to move",
+    "emotion": "Mild anxiety about an upcoming team meeting, coupled with passive contentment from browsing lifestyle influencers' posts during lunch break"
   },
   "agent_id": "agent_0010"
 }

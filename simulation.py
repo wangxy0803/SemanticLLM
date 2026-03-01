@@ -1,5 +1,6 @@
 """
 Simulation engine - runs discrete-time opinion dynamics with LLM agents.
+Supports parallel processing for faster execution.
 """
 
 import time
@@ -7,27 +8,42 @@ from typing import Dict, List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import anthropic
 import openai
-from google import genai
 import networkx as nx
 from config import (
     CONTROVERSIAL_TOPIC,
     API_PROVIDER,
-    API_MODEL
+    API_MODEL,
+    DEEPSEEK_BASE_URL,
+    DEEPSEEK_MODEL
 )
 from persona_agent import GraphPersonaNode
 
 
 def create_api_client(api_key: str = None):
-    """Create appropriate API client based on provider."""
+    """
+    Create appropriate API client based on provider configuration.
+    
+    Args:
+        api_key: API key for the chosen provider
+        
+    Returns:
+        Configured API client
+    """
     if API_PROVIDER == "anthropic":
         return anthropic.Anthropic(api_key=api_key)
+    
+    elif API_PROVIDER == "deepseek":
+        # DeepSeek uses OpenAI-compatible API
+        return openai.OpenAI(
+            api_key=api_key,
+            base_url=DEEPSEEK_BASE_URL
+        )
+    
     elif API_PROVIDER == "openai":
         return openai.OpenAI(api_key=api_key)
-    elif API_PROVIDER == "gemini" or API_PROVIDER == "google":
-        # Initialize Google GenAI client from environment variables
-        return genai.Client(api_key=api_key)
+    
     else:
-        raise ValueError(f"Unsupported API provider: {API_PROVIDER}")
+        raise ValueError(f"Unsupported API provider: {API_PROVIDER}. Use 'anthropic', 'deepseek', or 'openai'")
 
 
 def _process_single_agent(node_id: int,
@@ -40,16 +56,28 @@ def _process_single_agent(node_id: int,
                           current_opinion: str,
                           model_name: str = None) -> Tuple[int, str]:
     """
-    Helper function to process a single agent's round in a thread.
-    Returns (node_id, new_opinion).
+    Process a single agent's round in parallel execution.
+    
+    Args:
+        node_id: Agent's node ID
+        agent: GraphPersonaNode instance
+        api_client: API client
+        round_num: Current round number
+        topic: Discussion topic
+        neighbor_messages: Dict of neighbor opinions
+        is_bot: Whether this is a stubborn bot
+        current_opinion: Current opinion text
+        model_name: Model to use (optional)
+        
+    Returns:
+        Tuple of (node_id, new_opinion)
     """
-    # Check if bot (stubborn agent)
+    # Bots never update their opinions
     if is_bot:
         return node_id, current_opinion
 
-    # Agent processes the round
     try:
-        # Note: process_round returns a full dict with internal_analysis, etc.
+        # Agent processes the round and generates new opinion
         result = agent.process_round(
             client=api_client,
             round_num=round_num,
@@ -74,58 +102,61 @@ def run_simulation(G: nx.Graph,
                    num_rounds: int = 8,
                    verbose: bool = True) -> List[Dict[int, str]]:
     """
-    Run the full simulation using GraphPersonaNode agents.
-
+    Run the full multi-round simulation with parallel agent processing.
+    
     Args:
         G: Network graph
         node_personas: Mapping of node_id -> persona data dict
-        api_client: API client (Must be compatible with Agent class)
+        api_client: API client (Anthropic, DeepSeek, or OpenAI)
         num_rounds: Number of simulation rounds
-        verbose: Print progress
+        verbose: Print progress updates
         
     Returns:
         List of opinion snapshots (one dict per round)
         Each dict maps node_id -> opinion_text
     """
-    # 1. Initialize Agent Nodes
+    # Initialize agent instances
     agents: Dict[int, GraphPersonaNode] = {}
     for node_id in G.nodes():
-        # Instantiate GraphPersonaNode for each graph node
-        agents[node_id] = GraphPersonaNode(node_id=str(node_id), persona_data=node_personas[node_id])
+        agents[node_id] = GraphPersonaNode(
+            node_id=str(node_id), 
+            persona_data=node_personas[node_id]
+        )
 
-        # Initialize history with initial opinion if available in persona data
-        initial_op = node_personas[node_id].get("initial_opinion", "")
-        if initial_op:
-            agents[node_id].my_statements_history.append(initial_op)
+        # Set initial opinion
+        initial_opinion = node_personas[node_id].get("initial_opinion", "")
+        if initial_opinion:
+            agents[node_id].my_statements_history.append(initial_opinion)
 
-    # Store history of opinions (text only) for analysis
-    # Round 0 (Initial state)
+    # Initialize opinion history with round 0
     current_opinions = {
-        node_id: agents[node_id].my_statements_history[-1] if agents[node_id].my_statements_history else ""
+        node_id: agents[node_id].my_statements_history[-1] 
+        if agents[node_id].my_statements_history else ""
         for node_id in G.nodes()
     }
     opinion_history = [current_opinions.copy()]
 
     print(f"\n{'='*60}")
     print(f"Starting simulation: {num_rounds} rounds, {len(agents)} agents")
+    print(f"Using API: {API_PROVIDER}")
     print(f"{'='*60}\n")
 
+    # Run each round
     for round_num in range(1, num_rounds + 1):
         print(f"\n--- Round {round_num}/{num_rounds} ---")
         start_time = time.time()
         
-        # Store next round's opinions
         next_opinions = {}
         
-        # Prepare tasks for parallel execution
-        tasks = []
+        # Process agents in parallel
         with ThreadPoolExecutor() as executor:
+            tasks = []
+            
             for node_id in G.nodes():
-                # Prepare neighbor messages (READ-ONLY from current_opinions)
+                # Gather neighbor opinions
                 neighbors = list(G.neighbors(node_id))
                 neighbor_messages = {}
                 for neighbor_id in neighbors:
-                    # Use string node_id for neighbor keys as per persona_agent expectation
                     neighbor_name = node_personas[neighbor_id]["name"]
                     neighbor_msg = current_opinions.get(neighbor_id, "")
                     neighbor_messages[f"{neighbor_name} (ID: {neighbor_id})"] = neighbor_msg
@@ -133,7 +164,7 @@ def run_simulation(G: nx.Graph,
                 is_bot = node_personas[node_id].get("is_bot", False)
                 current_op = current_opinions.get(node_id, "")
 
-                # Submit task
+                # Submit parallel task
                 tasks.append(executor.submit(
                     _process_single_agent,
                     node_id=node_id,
@@ -165,7 +196,7 @@ def run_simulation(G: nx.Graph,
         elapsed = time.time() - start_time
         print(f"  Round {round_num} completed in {elapsed:.1f}s")
         
-        # Show sample opinions
+        # Show sample opinion
         if verbose and len(G.nodes()) > 0:
             sample_node = list(G.nodes())[0]
             name = node_personas[sample_node]['name']
@@ -185,10 +216,17 @@ def run_bot_intervention_study(G: nx.Graph,
                               bot_persona: Dict,
                               num_rounds: int = 8) -> Tuple[List, List]:
     """
-    Run simulation with and without disinformation bot.
+    Run simulation with and without disinformation bot to measure impact.
     
+    Args:
+        G: Network graph
+        node_personas: Persona mappings
+        api_client: API client
+        bot_persona: Persona for the bot
+        num_rounds: Number of rounds
+        
     Returns:
-        (baseline_history, intervention_history)
+        Tuple of (baseline_history, intervention_history)
     """
     from network_generation import add_disinformation_bot
     
@@ -196,23 +234,20 @@ def run_bot_intervention_study(G: nx.Graph,
     print("INTERVENTION STUDY: Baseline vs. Bot")
     print("="*60)
     
-    # Baseline run
+    # Baseline run (no bot)
     print("\n[1/2] Running BASELINE simulation (no bot)...")
     baseline_history = run_simulation(G, node_personas, api_client, num_rounds, verbose=False)
     
-    # Bot intervention run
+    # Intervention run (with bot)
     print("\n[2/2] Running INTERVENTION simulation (with bot)...")
     G_bot, bot_id = add_disinformation_bot(G, bot_persona, connection_strategy="high_degree")
     
-    # Add bot to personas
+    # Add bot to personas with stubborn flag
     node_personas_bot = node_personas.copy()
-
-    # Mark bot as stubborn agent
     bot_persona_with_flag = bot_persona.copy()
     bot_persona_with_flag["is_bot"] = True
     node_personas_bot[bot_id] = bot_persona_with_flag
 
-    # Bot never updates its opinion - override via is_bot flag
     intervention_history = run_simulation(
         G_bot, node_personas_bot, api_client, num_rounds, verbose=False
     )
