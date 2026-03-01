@@ -1,5 +1,6 @@
 """
 Measurement module - computes semantic variance using sentence embeddings.
+Uses SBERT for local embedding generation (no external API needed).
 """
 
 import numpy as np
@@ -8,23 +9,39 @@ from sklearn.metrics.pairwise import cosine_distances
 import matplotlib.pyplot as plt
 from typing import List, Dict
 import networkx as nx
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 
 class SemanticAnalyzer:
     """Analyzes semantic polarization using SBERT embeddings."""
     
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "all-mpnet-base-v2"):
         """
         Initialize with a sentence transformer model.
         
         Args:
             model_name: HuggingFace model name. 
-                       'all-MiniLM-L6-v2' is fast and good quality.
+                       'all-mpnet-base-v2' is much more precise than MiniLM
+                       and fits easily on an RTX 4060 (uses < 500MB VRAM).
         """
-        print(f"Loading sentence transformer: {model_name}")
-        self.model = SentenceTransformer(model_name)
-        print("Model loaded successfully")
-    
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Loading sentence transformer: {model_name} on {device}")
+
+        # This runs LOCALLY.
+        # First run downloads weights from HF Hub to local cache.
+        # Subsequent runs use local cache.
+        # It does NOT send data to an external API.
+        try:
+            self.model = SentenceTransformer(model_name, device=device)
+            print("Model loaded successfully (Local Inference)")
+        except Exception as e:
+            print(f"Failed to load model from HF Hub: {e}")
+            print("Try pre-downloading the model or checking internet connection.")
+            raise e
+        
+        self.sentiment_analyzer = SentimentIntensityAnalyzer()
+
     def embed_opinions(self, opinions: Dict[int, str]) -> Dict[int, np.ndarray]:
         """
         Convert opinion texts to embeddings.
@@ -59,7 +76,7 @@ class SemanticAnalyzer:
         
         return variance
     
-    def analyze_simulation(self, opinion_history: List[Dict[int, str]]) -> Dict:
+    def analyze_simulation(self, opinion_history: List[Dict[int, str]], topic: str = None) -> Dict:
         """
         Full analysis of simulation run.
         
@@ -72,12 +89,32 @@ class SemanticAnalyzer:
         print("\nComputing semantic embeddings for all rounds...")
         
         variances = []
+        topic_drifts = []
+        hostility_scores = []
         embeddings_history = []
         
+        topic_embedding = None
+        if topic:
+            topic_embedding = self.model.encode([topic], show_progress_bar=False)[0]
+
         for round_num, opinions in enumerate(opinion_history):
             embeddings = self.embed_opinions(opinions)
             variance = self.compute_semantic_variance(embeddings)
             
+            if topic_embedding is not None:
+                vectors = np.array([embeddings[node] for node in sorted(embeddings.keys())])
+                distances_to_topic = cosine_distances(vectors, [topic_embedding])
+                topic_drift = distances_to_topic.mean()
+                topic_drifts.append(topic_drift)
+            
+            round_negativity = []
+            for text in opinions.values():
+                score = self.sentiment_analyzer.polarity_scores(text)
+                round_negativity.append(score['neg'])
+                
+            avg_hostility = sum(round_negativity) / len(round_negativity) if round_negativity else 0
+            hostility_scores.append(avg_hostility)
+
             variances.append(variance)
             embeddings_history.append(embeddings)
             
@@ -90,6 +127,8 @@ class SemanticAnalyzer:
         
         return {
             "semantic_variance": variances,
+            "topic_drifts": topic_drifts,
+            "hostility_scores": hostility_scores,
             "embeddings_history": embeddings_history,
             "initial_variance": initial_variance,
             "final_variance": final_variance,
@@ -273,5 +312,78 @@ def plot_llm_vs_degroot(llm_analysis: Dict,
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"Comparison plot saved to {save_path}")
+    
+    plt.close()
+
+def plot_topic_drift(analysis_results: Dict, 
+                    title: str = "Topic Drift Over Time (Semantic Shift)",
+                    save_path: str = None,
+                    baseline_results: Dict = None):
+    """
+    Draw a curve showing the change of topic drift (deviation index) over time, and support dual-line comparison
+    """
+    if not analysis_results.get("topic_drifts"):
+        print("No topic drift data to plot.")
+        return
+        
+    plt.figure(figsize=(10, 6))
+    rounds = range(len(analysis_results["topic_drifts"]))
+    
+    plt.plot(rounds, analysis_results["topic_drifts"], 
+             marker='^', linewidth=2, markersize=8, 
+             label="Topic Drift (LLM Agents)", color='#D95D39')
+    
+    if baseline_results and "topic_drifts" in baseline_results:
+        plt.plot(rounds, baseline_results["topic_drifts"],
+                marker='v', linewidth=2, markersize=6,
+                label="Baseline (No Intervention)", color='#A23B72', linestyle='--')
+             
+    plt.xlabel("Simulation Round", fontsize=12)
+    plt.ylabel("Semantic Distance to Original Topic", fontsize=12)
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=11)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Topic drift plot saved to {save_path}")
+    
+    plt.close()
+
+def plot_hostility_trend(analysis_results: Dict, 
+                         title: str = "Network Hostility (Negative Sentiment) Over Time",
+                         save_path: str = None,
+                         baseline_results: Dict = None):
+    """
+    Draw a curve showing the change of network hostility (negative sentiment index) over time, and support dual-line comparison
+    """
+    if not analysis_results.get("hostility_scores"):
+        return
+        
+    plt.figure(figsize=(10, 6))
+    rounds = range(len(analysis_results["hostility_scores"]))
+    
+    plt.plot(rounds, analysis_results["hostility_scores"], 
+             marker='X', linewidth=2, markersize=8, 
+             label="Hostility Index (LLM Agents)", color='#E63946')
+    
+    if baseline_results and "hostility_scores" in baseline_results:
+        plt.plot(rounds, baseline_results["hostility_scores"],
+                marker='v', linewidth=2, markersize=6,
+                label="Baseline (No Intervention)", color='#457B9D', linestyle='--')
+             
+    plt.xlabel("Simulation Round", fontsize=12)
+    plt.ylabel("Average Negative Sentiment Score", fontsize=12)
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=11)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Hostility plot saved to {save_path}")
     
     plt.close()
