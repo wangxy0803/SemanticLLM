@@ -26,15 +26,22 @@ Can LLM agents capture semantic nuances of polarization (framing, rhetoric, logi
 ## 📁 Project Structure
 
 ```
-├── config.py                    # Configuration & persona definitions
-├── network_generation.py        # Graph creation, persona loading & visualization
-├── persona_agent.py             # Agent Logic (GraphPersonaNode)
-├── persona_generation.py        # Multi-threaded persona generator
-├── simulation.py               # Core LLM simulation engine
-├── measurement.py              # Semantic embedding analysis
-├── main.py                     # Orchestration script
-├── requirements.txt            # Dependencies
-└── README.md                   # This file
+.
+├── config.py                    # Configuration & static persona templates
+├── persona_generation.py        # LLM-based persona generator
+├── persona_agent.py             # Agent class with memory
+├── network_generation.py        # Graph creation & visualization
+├── simulation.py                # Parallel simulation engine
+├── measurement.py               # Semantic analysis (SBERT)
+├── main.py                      # Orchestration script
+├── requirements.txt             # Dependencies
+├── .env                         # API keys (create this)
+└── prompts/
+    ├── seeds.json               # Weighted trait pools
+    └── persona/                 # Generated persona JSONs
+        ├── agent_0000.json
+        ├── agent_0001.json
+        └── ...
 ```
 
 ---
@@ -51,13 +58,8 @@ pip install -r requirements.txt
 
 
 ```bash
-# For Anthropic (Claude)
-export ANTHROPIC_API_KEY="your-key-here"
-
-# For Google Gemini
-export GEMINI_API_KEY="your-key-here"
-# Or update .env file
-
+# For Deepseek
+export DEEPSEEK_API_KEY="your-key-here"
 ```
 
 ### 3. Run Baseline Simulation
