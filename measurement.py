@@ -6,10 +6,12 @@ Uses SBERT for local embedding generation (no external API needed).
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_distances
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
 from typing import List, Dict
 import networkx as nx
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+# from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 
 class SemanticAnalyzer:
@@ -40,7 +42,7 @@ class SemanticAnalyzer:
             print("Try pre-downloading the model or checking internet connection.")
             raise e
         
-        self.sentiment_analyzer = SentimentIntensityAnalyzer()
+        # self.sentiment_analyzer = SentimentIntensityAnalyzer()
 
     def embed_opinions(self, opinions: Dict[int, str]) -> Dict[int, np.ndarray]:
         """
@@ -76,12 +78,42 @@ class SemanticAnalyzer:
         
         return variance
     
+    def compute_polarization_index(self, embeddings: Dict[int, np.ndarray]) -> float:
+        """
+        Compute polarization index using Silhouette Score.
+        Clustering into 2 groups (k=2) to measure bipolarization.
+
+        Range: [-1, 1]
+        High +1: Strong clusters (Polarized)
+        Low 0: Overlapping clusters (Consensus/Chaos)
+        """
+        vectors = np.array([embeddings[node] for node in sorted(embeddings.keys())])
+
+        # Need at least 2 samples and >1 unique labels
+        if len(vectors) < 3:
+            return 0.0
+
+        try:
+            kmeans = KMeans(n_clusters=2, random_state=42, n_init=10).fit(vectors)
+            labels = kmeans.labels_
+
+            # Check if we actually have 2 clusters
+            if len(set(labels)) < 2:
+                return 0.0
+
+            score = silhouette_score(vectors, labels, metric='cosine')
+            return score
+        except Exception as e:
+            print(f"Polarization calc error: {e}")
+            return 0.0
+
     def analyze_simulation(self, opinion_history: List[Dict[int, str]], topic: str = None) -> Dict:
         """
         Full analysis of simulation run.
         
         Returns dict with:
             - semantic_variance: List of variance over time
+            - polarization_indices: List of polarization (silhouette) scores
             - embeddings_history: List of embedding dicts
             - initial_variance, final_variance
             - convergence_rate
@@ -90,7 +122,8 @@ class SemanticAnalyzer:
         
         variances = []
         topic_drifts = []
-        hostility_scores = []
+        # hostility_scores = []
+        polarization_indices = []
         embeddings_history = []
         
         topic_embedding = None
@@ -100,26 +133,28 @@ class SemanticAnalyzer:
         for round_num, opinions in enumerate(opinion_history):
             embeddings = self.embed_opinions(opinions)
             variance = self.compute_semantic_variance(embeddings)
-            
+            polarization = self.compute_polarization_index(embeddings)
+
             if topic_embedding is not None:
                 vectors = np.array([embeddings[node] for node in sorted(embeddings.keys())])
                 distances_to_topic = cosine_distances(vectors, [topic_embedding])
                 topic_drift = distances_to_topic.mean()
                 topic_drifts.append(topic_drift)
             
-            round_negativity = []
-            for text in opinions.values():
-                score = self.sentiment_analyzer.polarity_scores(text)
-                round_negativity.append(score['neg'])
-                
-            avg_hostility = sum(round_negativity) / len(round_negativity) if round_negativity else 0
-            hostility_scores.append(avg_hostility)
+            # round_negativity = []
+            # for text in opinions.values():
+            #     score = self.sentiment_analyzer.polarity_scores(text)
+            #     round_negativity.append(score['neg'])
+            #
+            # avg_hostility = sum(round_negativity) / len(round_negativity) if round_negativity else 0
+            # hostility_scores.append(avg_hostility)
 
             variances.append(variance)
+            polarization_indices.append(polarization)
             embeddings_history.append(embeddings)
             
-            print(f"  Round {round_num}: Semantic Variance = {variance:.4f}")
-        
+            print(f"  Round {round_num}: Semantic Variance = {variance:.4f}, Polarization Index = {polarization:.4f}")
+
         # Compute metrics
         initial_variance = variances[0]
         final_variance = variances[-1]
@@ -127,8 +162,9 @@ class SemanticAnalyzer:
         
         return {
             "semantic_variance": variances,
+            "polarization_indices": polarization_indices,
             "topic_drifts": topic_drifts,
-            "hostility_scores": hostility_scores,
+            # "hostility_scores": hostility_scores,
             "embeddings_history": embeddings_history,
             "initial_variance": initial_variance,
             "final_variance": final_variance,
@@ -190,16 +226,22 @@ def plot_semantic_variance(analysis_results: Dict,
     """
     plt.figure(figsize=(10, 6))
     
-    rounds = range(len(analysis_results["semantic_variance"]))
-    
+    # Skip index 0 (initial state)
+    data = analysis_results["semantic_variance"][1:]
+    rounds = range(1, len(data) + 1)
+
     # Main line
-    plt.plot(rounds, analysis_results["semantic_variance"], 
-             marker='o', linewidth=2, markersize=8, 
+    plt.plot(rounds, data,
+             marker='o', linewidth=2, markersize=8,
              label="LLM Simulation", color='#2E86AB')
     
     # Baseline comparison if provided
     if baseline_results:
-        plt.plot(rounds, baseline_results["semantic_variance"],
+        baseline_data = baseline_results["semantic_variance"][1:]
+        # Ensure lengths match even if baseline has different length
+        b_rounds = range(1, len(baseline_data) + 1)
+
+        plt.plot(b_rounds, baseline_data,
                 marker='s', linewidth=2, markersize=6,
                 label="Baseline", color='#A23B72', linestyle='--')
     
@@ -286,20 +328,28 @@ def plot_llm_vs_degroot(llm_analysis: Dict,
     """
     plt.figure(figsize=(10, 6))
     
-    rounds = range(len(llm_analysis["semantic_variance"]))
-    
-    plt.plot(rounds, llm_analysis["semantic_variance"],
+    # Skip index 0
+    llm_data = llm_analysis["semantic_variance"][1:]
+    rounds = range(1, len(llm_data) + 1)
+
+    plt.plot(rounds, llm_data,
             marker='o', linewidth=2, markersize=8,
             label="LLM Agents (Semantic)", color='#2E86AB')
     
     # Normalize DeGroot to similar scale for comparison
-    degroot_normalized = np.array(degroot_variances) / degroot_variances[0]
-    llm_normalized = np.array(llm_analysis["semantic_variance"]) / llm_analysis["semantic_variance"][0]
-    
-    plt.plot(rounds, degroot_normalized,
-            marker='s', linewidth=2, markersize=6,
-            label="DeGroot (Scalar, Normalized)", color='#A23B72', linestyle='--')
-    
+    # Use index 1 as normalization base since we skip 0
+    degroot_data = degroot_variances[1:]
+    # Avoid division by zero if degroot_data[0] is 0
+    deg_base = degroot_data[0] if degroot_data and degroot_data[0] != 0 else 1.0
+
+    if degroot_data:
+        degroot_normalized = np.array(degroot_data) / deg_base
+        d_rounds = range(1, len(degroot_normalized) + 1)
+
+        plt.plot(d_rounds, degroot_normalized,
+                marker='s', linewidth=2, markersize=6,
+                label="DeGroot (Scalar, Normalized)", color='#A23B72', linestyle='--')
+
     plt.xlabel("Simulation Round", fontsize=12)
     plt.ylabel("Normalized Variance", fontsize=12)
     plt.title("LLM Semantic Dynamics vs. Classical DeGroot Model", 
@@ -327,14 +377,20 @@ def plot_topic_drift(analysis_results: Dict,
         return
         
     plt.figure(figsize=(10, 6))
-    rounds = range(len(analysis_results["topic_drifts"]))
-    
-    plt.plot(rounds, analysis_results["topic_drifts"], 
-             marker='^', linewidth=2, markersize=8, 
+
+    # Skip index 0
+    data = analysis_results["topic_drifts"][1:]
+    rounds = range(1, len(data) + 1)
+
+    plt.plot(rounds, data,
+             marker='^', linewidth=2, markersize=8,
              label="Topic Drift (LLM Agents)", color='#D95D39')
     
     if baseline_results and "topic_drifts" in baseline_results:
-        plt.plot(rounds, baseline_results["topic_drifts"],
+        baseline_data = baseline_results["topic_drifts"][1:]
+        b_rounds = range(1, len(baseline_data) + 1)
+
+        plt.plot(b_rounds, baseline_data,
                 marker='v', linewidth=2, markersize=6,
                 label="Baseline (No Intervention)", color='#A23B72', linestyle='--')
              
@@ -363,14 +419,20 @@ def plot_hostility_trend(analysis_results: Dict,
         return
         
     plt.figure(figsize=(10, 6))
-    rounds = range(len(analysis_results["hostility_scores"]))
-    
-    plt.plot(rounds, analysis_results["hostility_scores"], 
-             marker='X', linewidth=2, markersize=8, 
+
+    # Skip index 0
+    data = analysis_results["hostility_scores"][1:]
+    rounds = range(1, len(data) + 1)
+
+    plt.plot(rounds, data,
+             marker='X', linewidth=2, markersize=8,
              label="Hostility Index (LLM Agents)", color='#E63946')
     
     if baseline_results and "hostility_scores" in baseline_results:
-        plt.plot(rounds, baseline_results["hostility_scores"],
+        baseline_data = baseline_results["hostility_scores"][1:]
+        b_rounds = range(1, len(baseline_data) + 1)
+
+        plt.plot(b_rounds, baseline_data,
                 marker='v', linewidth=2, markersize=6,
                 label="Baseline (No Intervention)", color='#457B9D', linestyle='--')
              
@@ -387,3 +449,55 @@ def plot_hostility_trend(analysis_results: Dict,
         print(f"Hostility plot saved to {save_path}")
     
     plt.close()
+
+def plot_polarization_index(analysis_results: Dict,
+                            title: str = "Polarization Index (Silhouette Score)",
+                            save_path: str = None,
+                            baseline_results: Dict = None):
+    """
+    Plot polarization index (cluster formation) over time.
+    High score = Agents are forming distinct camps (Echo Chambers).
+    Low score = Agents are mixing or chaotic.
+    """
+    if "polarization_indices" not in analysis_results:
+        print("No polarization index data to plot.")
+        return
+
+    plt.figure(figsize=(10, 6))
+
+    # Skip index 0
+    data = analysis_results["polarization_indices"][1:]
+    rounds = range(1, len(data) + 1)
+
+    plt.plot(rounds, data,
+             marker='d', linewidth=2, markersize=8,
+             label="Polarization Index (Silhouette)", color='#6A0572')
+
+    if baseline_results and "polarization_indices" in baseline_results:
+        baseline_data = baseline_results["polarization_indices"][1:]
+        b_rounds = range(1, len(baseline_data) + 1)
+
+        plt.plot(b_rounds, baseline_data,
+                marker='v', linewidth=2, markersize=6,
+                label="Baseline", color='#AB87FF', linestyle='--')
+
+    plt.xlabel("Simulation Round", fontsize=12)
+    plt.ylabel("Silhouette Score [-1, 1]", fontsize=12)
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=11)
+
+    # Add explanation box
+    props = dict(boxstyle='round', facecolor='#E3D7FF', alpha=0.5)
+    plt.text(0.05, 0.95, "High (>0.2) = Distinct Camps\nLow (<0.1) = Well Mixed",
+             transform=plt.gca().transAxes, fontsize=10,
+             verticalalignment='top', bbox=props)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Polarization plot saved to {save_path}")
+
+    plt.close()
+

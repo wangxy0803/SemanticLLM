@@ -95,6 +95,8 @@ Your neighbors' statements:
 
 ## Task
 Based on your persona and neighbors' opinions, generate your response.
+Maintain consistency with your previous statements unless you see a compelling reason to change.
+Do not flip-flop your opinion randomly.
 You can agree, disagree, argue, or ignore them. Show clear personal opinion.
 
 Output as JSON with:
@@ -111,7 +113,7 @@ Output as JSON with:
                     max_tokens=1000,
                     system=system_instruction,
                     messages=[{"role": "user", "content": user_content}],
-                    temperature=0.7
+                    temperature=1.0
                 )
 
                 # Extract JSON from response
@@ -132,7 +134,7 @@ Output as JSON with:
                         {"role": "user", "content": user_content}
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.7,
+                    temperature=1.0,
                     max_tokens=1000
                 )
 

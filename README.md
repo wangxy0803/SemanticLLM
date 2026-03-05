@@ -89,17 +89,55 @@ python main.py --mode baseline
 ![Network Structure](outputs/network_structure.png)
 
 - `semantic_variance.png` - Variance over time
-![Semantic Variance](outputs/semantic_variance.png)
+![Semantic Variance](outputs/baseline/karate/avg_semantic_variance.png)
+
+- `polarization_index.png` - Polarization over time
+![polarization index](outputs/baseline/karate/avg_polarization_index.png)
 
 - `topic_drift.png` - Topic drift (semantic shift) over time
-![Topic Drift](outputs/topic_drift.png)
+![Topic Drift](outputs/baseline/karate/avg_topic_drift.png)
 
-- `hostility_trend.png` - Network hostility (negative sentiment) over time
-![Hostility_Trend](outputs/hostility_trend.png)
+[//]: # (- `hostility_trend.png` - Network hostility &#40;negative sentiment&#41; over time)
+
+[//]: # (![Hostility_Trend]&#40;outputs/hostility_trend.png&#41;)
 
 - `sample_opinions.txt` - Opinion trajectories for 3 agents
 
-### 2. Bot Intervention Study
+
+### 2. Topology Comparison
+```bash
+python main.py --mode comparison
+```
+Compares Scale-free, Small-world, and Random networks.
+**Outputs:**
+- `topology_comparison_variance.png` - Topology Impact on Variance
+![Topology Comparison](outputs/baseline/comparison_results/topology_comparison_variance.png)
+
+- `topology_comparison_polarization.png` - Topology Impact on Polarization
+![Polarization Comparison](outputs/baseline/comparison_results/topology_comparison_polarization.png)
+
+**Analysis of Results:**
+* **Overall Trend**: All topologies show a decreasing trend in semantic variance, indicating a global convergence towards consensus. This is driven by the LLM's alignment bias (RLHF), which favors balanced, moderate, and logically self-consistent responses, acting as a "low-pass filter" for extreme opinions.
+* **Random Network (Green)**: 
+    *   **Variance**: Lowest. The lack of local structure acts as a "highly efficient mixer," allowing mainstream opinions to propagate rapidly.
+    *   **Polarization**: *Highest*. This counter-intuitive result (High Polarization + Low Variance) indicates a **"Clean Split"** phenomenon. The efficient mixing eliminates nuanced, intermediate opinions, forcing the population into two very tight, distinct clusters (Bimodal distribution). Everyone agrees to disagree in exactly the same way.
+* **Scale-Free Network (Blue)**: 
+    *   **Variance**: Highest. The presence of Hubs (opinion leaders) anchors diverse perspectives, preventing total convergence.
+    *   **Polarization**: *Lower*. The result represents **"Disorganized Diversity"**. While opinions are diverse, they are scattered and "messy," failing to coalesce into two clean, opposing camps. The Hubs maintain their own idiosyncratic spheres of influence, blurring the lines between groups.
+* **Small-World Network (Orange)**: Intermediate behavior. High clustering coefficients create "echo chambers" that protect local diversity better than random networks, but long-range connections eventually erode these differences.
+
+
+### 3. DeGroot Comparison
+```bash
+python main.py --mode degroot
+```
+Compares LLM semantic dynamics with classical DeGroot model.
+**Outputs:**
+- `llm_vs_degroot.png` - LLM VS Degroot Comparison
+![Degroot Comparison](outputs/llm_vs_degroot.png)
+
+
+### 4. Bot Intervention Study
 ```bash
 python main.py --mode intervention
 ```
@@ -113,28 +151,6 @@ Tests network resilience by adding a high-degree "disinformation bot" node.
 
 - `intervention_hostility_trend.png` - Network hostility with intervention over time
 ![Hostility_Trend](outputs/intervention_hostility.png)
-
-
-### 3. Topology Comparison
-```bash
-python main.py --mode comparison
-```
-Compares Scale-free, Small-world, and Random networks.
-**Outputs:**
-- `topology_comparison.png` - Topology Comparison
-![Topology Comparison](outputs/topology_comparison.png)
-- `topology_topic_drift.png` - Network topology impact on topic drift
-![Topic Drift](outputs/topology_topic_drift.png)
-
-
-### 4. DeGroot Comparison
-```bash
-python main.py --mode degroot
-```
-Compares LLM semantic dynamics with classical DeGroot model.
-**Outputs:**
-- `llm_vs_degroot.png` - LLM VS Degroot Comparison
-![Degroot Comparison](outputs/llm_vs_degroot.png)
 
 
 ---
@@ -226,5 +242,3 @@ SIMULATION_ROUNDS = 8
 # Topic
 CONTROVERSIAL_TOPIC = "AI Regulation"
 ```
-
-
