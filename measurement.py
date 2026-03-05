@@ -9,6 +9,7 @@ from sklearn.metrics.pairwise import cosine_distances
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from typing import List, Dict
 import networkx as nx
 # from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -245,6 +246,7 @@ def plot_semantic_variance(analysis_results: Dict,
                 marker='s', linewidth=2, markersize=6,
                 label="Baseline", color='#A23B72', linestyle='--')
     
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.xlabel("Simulation Round", fontsize=12)
     plt.ylabel("Semantic Variance (Mean Cosine Distance)", fontsize=12)
     plt.title(title, fontsize=14, fontweight='bold')
@@ -350,6 +352,7 @@ def plot_llm_vs_degroot(llm_analysis: Dict,
                 marker='s', linewidth=2, markersize=6,
                 label="DeGroot (Scalar, Normalized)", color='#A23B72', linestyle='--')
 
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.xlabel("Simulation Round", fontsize=12)
     plt.ylabel("Normalized Variance", fontsize=12)
     plt.title("LLM Semantic Dynamics vs. Classical DeGroot Model", 
@@ -394,6 +397,7 @@ def plot_topic_drift(analysis_results: Dict,
                 marker='v', linewidth=2, markersize=6,
                 label="Baseline (No Intervention)", color='#A23B72', linestyle='--')
              
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.xlabel("Simulation Round", fontsize=12)
     plt.ylabel("Semantic Distance to Original Topic", fontsize=12)
     plt.title(title, fontsize=14, fontweight='bold')
@@ -436,6 +440,7 @@ def plot_hostility_trend(analysis_results: Dict,
                 marker='v', linewidth=2, markersize=6,
                 label="Baseline (No Intervention)", color='#457B9D', linestyle='--')
              
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.xlabel("Simulation Round", fontsize=12)
     plt.ylabel("Average Negative Sentiment Score", fontsize=12)
     plt.title(title, fontsize=14, fontweight='bold')
@@ -481,6 +486,7 @@ def plot_polarization_index(analysis_results: Dict,
                 marker='v', linewidth=2, markersize=6,
                 label="Baseline", color='#AB87FF', linestyle='--')
 
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.xlabel("Simulation Round", fontsize=12)
     plt.ylabel("Silhouette Score [-1, 1]", fontsize=12)
     plt.title(title, fontsize=14, fontweight='bold')

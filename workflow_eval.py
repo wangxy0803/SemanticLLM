@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 from config import (
     NETWORK_SIZE, NETWORK_TYPE, SIMULATION_ROUNDS,
@@ -58,7 +59,7 @@ def load_json(filepath):
 def aggregate_analyses(analyses_list):
     """
     Aggregate a list of analysis result dicts into a single average result.
-    Computes mean for list-based metrics (variance, polarization, drift).
+    Computes mean for list-based metrics (time series)
     """
     if not analyses_list:
         return None
@@ -218,10 +219,16 @@ def eval_topology():
     # Variance Plot
     plt.figure(figsize=(12, 6))
     for topology, analysis in results.items():
-        rounds = range(len(analysis["semantic_variance"]))
-        plt.plot(rounds, analysis["semantic_variance"], marker='o', label=topology.title())
+        data = analysis["semantic_variance"][1:]
+        rounds = range(1, len(data) + 1)
+        plt.plot(rounds, data, marker='o', label=topology.title())
+
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.xlabel("Simulation Round")
+    plt.ylabel("Semantic Variance")
     plt.title("Topology Impact on Variance (Avg of 3 Runs)")
     plt.legend()
+    plt.grid(True, alpha=0.3)
     plt.savefig(comp_dir / "topology_comparison_variance.png")
     plt.close()
 
@@ -229,11 +236,34 @@ def eval_topology():
     plt.figure(figsize=(12, 6))
     for topology, analysis in results.items():
         if "polarization_indices" in analysis:
-            rounds = range(len(analysis["polarization_indices"]))
-            plt.plot(rounds, analysis["polarization_indices"], marker='d', label=topology.title())
+            data = analysis["polarization_indices"][1:]
+            rounds = range(1, len(data) + 1)
+            plt.plot(rounds, data, marker='d', label=topology.title())
+
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.xlabel("Simulation Round")
+    plt.ylabel("Polarization Index")
     plt.title("Topology Impact on Polarization (Avg of 3 Runs)")
     plt.legend()
+    plt.grid(True, alpha=0.3)
     plt.savefig(comp_dir / "topology_comparison_polarization.png")
+    plt.close()
+
+    # Topic Drift Plot
+    plt.figure(figsize=(12, 6))
+    for topology, analysis in results.items():
+        if "topic_drifts" in analysis:
+            data = analysis["topic_drifts"][1:]
+            rounds = range(1, len(data) + 1)
+            plt.plot(rounds, data, marker='^', label=topology.title())
+
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.xlabel("Simulation Round")
+    plt.ylabel("Topic Drift (Semantic Distance)")
+    plt.title("Topology Impact on Topic Drift (Avg of 3 Runs)")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.savefig(comp_dir / "topology_comparison_topic_drift.png")
     plt.close()
 
 

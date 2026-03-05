@@ -116,6 +116,9 @@ Compares Scale-free, Small-world, and Random networks.
 - `topology_comparison_polarization.png` - Topology Impact on Polarization
 ![Polarization Comparison](outputs/baseline/comparison_results/topology_comparison_polarization.png)
 
+- `topology_comparison_topic_drift.png` - Topology Impact on Topic Drift
+![Topic Drift Comparison](outputs/baseline/comparison_results/topology_comparison_topic_drift.png)
+
 **Analysis of Results:**
 * **Overall Trend**: All topologies show a decreasing trend in semantic variance, indicating a global convergence towards consensus. This is driven by the LLM's alignment bias (RLHF), which favors balanced, moderate, and logically self-consistent responses, acting as a "low-pass filter" for extreme opinions.
 * **Random Network (Green)**: 
@@ -124,6 +127,7 @@ Compares Scale-free, Small-world, and Random networks.
 * **Scale-Free Network (Blue)**: 
     *   **Variance**: Highest. The presence of Hubs (opinion leaders) anchors diverse perspectives, preventing total convergence.
     *   **Polarization**: *Lower*. The result represents **"Disorganized Diversity"**. While opinions are diverse, they are scattered and "messy," failing to coalesce into two clean, opposing camps. The Hubs maintain their own idiosyncratic spheres of influence, blurring the lines between groups.
+    *   **Topic Drift**: *Highest*. This is due to the **"Super-Spreader Effect"**. In Scale-Free networks, a few Hub nodes dominate the conversation. If a Hub agent effectively "hallucinates" or pivots to a tangential sub-topic (common with Temperature=1.0), this semantic deviation is instantly broadcast to a vast number of followers. The Hub acts as a megaphone for semantic noise, causing the entire network to drift away from the original prompt faster than in decentralized networks.
 * **Small-World Network (Orange)**: Intermediate behavior. High clustering coefficients create "echo chambers" that protect local diversity better than random networks, but long-range connections eventually erode these differences.
 
 
