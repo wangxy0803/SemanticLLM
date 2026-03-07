@@ -1,6 +1,8 @@
 """
 Workflow Evaluation Script.
 Handles loading simulation history, running semantic analysis, and generating plots.
+
+COMPATIBLE WITH IMPROVED PROMPTS - Same evaluation methods work fine!
 """
 
 import argparse
@@ -19,7 +21,6 @@ from config import (
 from network_generation import create_network
 from measurement import (
     SemanticAnalyzer, plot_semantic_variance,
-    compare_with_degroot, plot_llm_vs_degroot,
     plot_topic_drift, plot_hostility_trend,
     plot_polarization_index
 )
@@ -40,7 +41,6 @@ def load_json(filepath):
 
     def restore_keys(obj):
         if isinstance(obj, dict):
-            # Try to convert keys to int if they look like ints
             new_dict = {}
             for k, v in obj.items():
                 try:
@@ -57,10 +57,7 @@ def load_json(filepath):
     return restore_keys(data)
 
 def aggregate_analyses(analyses_list):
-    """
-    Aggregate a list of analysis result dicts into a single average result.
-    Computes mean for list-based metrics (time series)
-    """
+    """Aggregate a list of analysis result dicts into a single average result."""
     if not analyses_list:
         return None
 
@@ -72,15 +69,11 @@ def aggregate_analyses(analyses_list):
 
     for metric in list_metrics:
         if metric in avg_result:
-            # Sum up
             summed = np.array(avg_result[metric])
             for i in range(1, count):
                 if metric in analyses_list[i]:
-                    # Ensure length match, truncate to min length just in case
                     min_len = min(len(summed), len(analyses_list[i][metric]))
                     summed = summed[:min_len] + np.array(analyses_list[i][metric][:min_len])
-
-            # Divide by count to get mean
             avg_result[metric] = (summed / count).tolist()
 
     # Scalar metrics
@@ -92,7 +85,7 @@ def aggregate_analyses(analyses_list):
                 val += analyses_list[i].get(metric, 0)
             avg_result[metric] = val / count
 
-    # Re-calculate trend based on average
+    # Re-calculate trend
     if avg_result["final_variance"] > avg_result["initial_variance"]:
         avg_result["polarization_trend"] = "increasing"
     else:
@@ -106,10 +99,9 @@ def aggregate_analyses(analyses_list):
 
 def eval_baseline():
     print("\n=== EVALUATION: BASELINE SIMULATION ===")
+    print("Analyzing results from IMPROVED PROMPTS")
 
-    # Load 3 runs
     analyses = []
-    # Change: Load from baseline/{NETWORK_TYPE} to match generation structure
     output_dir = setup_output_directory(f"baseline/{NETWORK_TYPE}")
 
     analyzer = SemanticAnalyzer()
@@ -131,20 +123,29 @@ def eval_baseline():
     # Average
     avg_analysis = aggregate_analyses(analyses)
 
+    print(f"\n{'='*70}")
+    print("RESULTS (Averaged across 3 runs)")
+    print(f"{'='*70}")
     print(f"Avg Initial Variance: {avg_analysis['initial_variance']:.4f}")
     print(f"Avg Final Variance: {avg_analysis['final_variance']:.4f}")
     print(f"Trend: {avg_analysis['polarization_trend']}")
+    print(f"Convergence Rate: {avg_analysis['convergence_rate']:+.1%}")
+    print(f"{'='*70}\n")
 
-    plot_semantic_variance(avg_analysis, title="Semantic Variance (Avg of 3 Runs)",
+    plot_semantic_variance(avg_analysis, title="Semantic Variance (Improved Prompts - Avg of 3 Runs)",
                           save_path=str(output_dir / "avg_semantic_variance.png"))
-    plot_topic_drift(avg_analysis, title="Topic Drift (Avg of 3 Runs)",
+    plot_topic_drift(avg_analysis, title="Topic Drift (Improved Prompts - Avg of 3 Runs)",
                     save_path=str(output_dir / "avg_topic_drift.png"))
-    plot_polarization_index(avg_analysis, title="Polarization Index (Avg of 3 Runs)",
+    plot_polarization_index(avg_analysis, title="Polarization Index (Improved Prompts - Avg of 3 Runs)",
                            save_path=str(output_dir / "avg_polarization_index.png"))
+
+    print(f"✅ Plots saved to {output_dir}")
 
 
 def eval_intervention():
     print("\n=== EVALUATION: INTERVENTION STUDY ===")
+    print("Analyzing bot intervention with IMPROVED PROMPTS")
+    
     output_dir = setup_output_directory("intervention")
 
     analyzer = SemanticAnalyzer()
@@ -171,30 +172,40 @@ def eval_intervention():
     avg_base = aggregate_analyses(base_analyses)
     avg_int = aggregate_analyses(int_analyses)
 
+    print(f"\n{'='*70}")
+    print("BOT INTERVENTION IMPACT (Averaged across 3 runs)")
+    print(f"{'='*70}")
+    print(f"Avg Baseline Final Variance: {avg_base['final_variance']:.4f}")
+    print(f"Avg Intervention Final Variance: {avg_int['final_variance']:.4f}")
     print(f"Avg Variance Increase: {avg_int['final_variance'] - avg_base['final_variance']:.4f}")
+    print(f"Impact: {100*(avg_int['final_variance'] - avg_base['final_variance'])/avg_base['final_variance']:+.1f}%")
+    print(f"{'='*70}\n")
 
-    plot_semantic_variance(avg_int, title="Bot Intervention Impact (Avg Variance)",
+    plot_semantic_variance(avg_int, title="Bot Intervention Impact (Improved Prompts)",
                           save_path=str(output_dir / "avg_intervention_comparison.png"),
                           baseline_results=avg_base)
 
-    plot_topic_drift(avg_int, title="Bot Intervention Impact (Avg Drift)",
+    plot_topic_drift(avg_int, title="Bot Intervention - Topic Drift (Improved Prompts)",
                     save_path=str(output_dir / "avg_intervention_topic_drift.png"),
                     baseline_results=avg_base)
 
-    plot_polarization_index(avg_int, title="Bot Intervention Impact (Avg Polarization)",
+    plot_polarization_index(avg_int, title="Bot Intervention - Polarization (Improved Prompts)",
                            save_path=str(output_dir / "avg_intervention_polarization.png"),
                            baseline_results=avg_base)
+
+    print(f"✅ Plots saved to {output_dir}")
 
 
 def eval_topology():
     print("\n=== EVALUATION: TOPOLOGY COMPARISON ===")
+    print("Analyzing topology effects with IMPROVED PROMPTS")
+    
     topologies = ["scale_free", "small_world", "random"]
     results = {}
 
     analyzer = SemanticAnalyzer()
 
     for topology in topologies:
-        # Change: Load from baseline/{topology} to match unified structure
         output_dir = setup_output_directory(f"baseline/{topology}")
         topo_analyses = []
 
@@ -209,11 +220,19 @@ def eval_topology():
         if topo_analyses:
             results[topology] = aggregate_analyses(topo_analyses)
 
-    # Comparative Plots
     if not results:
+        print("No results found.")
         return
 
-    # Change: Save comparison results to a dedicated folder under baseline
+    # Print summary
+    print(f"\n{'='*70}")
+    print("TOPOLOGY COMPARISON SUMMARY (Improved Prompts)")
+    print(f"{'='*70}")
+    for topology, analysis in results.items():
+        print(f"{topology.replace('_', ' ').title():15s}: Final Variance = {analysis['final_variance']:.4f}")
+    print(f"{'='*70}\n")
+
+    # Comparative Plots
     comp_dir = setup_output_directory("baseline/comparison_results")
 
     # Variance Plot
@@ -221,15 +240,16 @@ def eval_topology():
     for topology, analysis in results.items():
         data = analysis["semantic_variance"][1:]
         rounds = range(1, len(data) + 1)
-        plt.plot(rounds, data, marker='o', label=topology.title())
+        plt.plot(rounds, data, marker='o', linewidth=2, label=topology.replace('_', ' ').title())
 
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-    plt.xlabel("Simulation Round")
-    plt.ylabel("Semantic Variance")
-    plt.title("Topology Impact on Variance (Avg of 3 Runs)")
-    plt.legend()
+    plt.xlabel("Simulation Round", fontsize=12)
+    plt.ylabel("Semantic Variance", fontsize=12)
+    plt.title("Topology Impact on Variance (Improved Prompts - Avg of 3 Runs)", fontsize=14, fontweight='bold')
+    plt.legend(fontsize=11)
     plt.grid(True, alpha=0.3)
-    plt.savefig(comp_dir / "topology_comparison_variance.png")
+    plt.tight_layout()
+    plt.savefig(comp_dir / "topology_comparison_variance.png", dpi=300)
     plt.close()
 
     # Polarization Plot
@@ -238,15 +258,16 @@ def eval_topology():
         if "polarization_indices" in analysis:
             data = analysis["polarization_indices"][1:]
             rounds = range(1, len(data) + 1)
-            plt.plot(rounds, data, marker='d', label=topology.title())
+            plt.plot(rounds, data, marker='d', linewidth=2, label=topology.replace('_', ' ').title())
 
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-    plt.xlabel("Simulation Round")
-    plt.ylabel("Polarization Index")
-    plt.title("Topology Impact on Polarization (Avg of 3 Runs)")
-    plt.legend()
+    plt.xlabel("Simulation Round", fontsize=12)
+    plt.ylabel("Polarization Index", fontsize=12)
+    plt.title("Topology Impact on Polarization (Improved Prompts - Avg of 3 Runs)", fontsize=14, fontweight='bold')
+    plt.legend(fontsize=11)
     plt.grid(True, alpha=0.3)
-    plt.savefig(comp_dir / "topology_comparison_polarization.png")
+    plt.tight_layout()
+    plt.savefig(comp_dir / "topology_comparison_polarization.png", dpi=300)
     plt.close()
 
     # Topic Drift Plot
@@ -255,52 +276,19 @@ def eval_topology():
         if "topic_drifts" in analysis:
             data = analysis["topic_drifts"][1:]
             rounds = range(1, len(data) + 1)
-            plt.plot(rounds, data, marker='^', label=topology.title())
+            plt.plot(rounds, data, marker='^', linewidth=2, label=topology.replace('_', ' ').title())
 
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-    plt.xlabel("Simulation Round")
-    plt.ylabel("Topic Drift (Semantic Distance)")
-    plt.title("Topology Impact on Topic Drift (Avg of 3 Runs)")
-    plt.legend()
+    plt.xlabel("Simulation Round", fontsize=12)
+    plt.ylabel("Topic Drift (Semantic Distance)", fontsize=12)
+    plt.title("Topology Impact on Topic Drift (Improved Prompts - Avg of 3 Runs)", fontsize=14, fontweight='bold')
+    plt.legend(fontsize=11)
     plt.grid(True, alpha=0.3)
-    plt.savefig(comp_dir / "topology_comparison_topic_drift.png")
+    plt.tight_layout()
+    plt.savefig(comp_dir / "topology_comparison_topic_drift.png", dpi=300)
     plt.close()
 
-
-def eval_degroot():
-    print("\n=== EVALUATION: DEGROOT COMPARISON ===")
-    output_dir = setup_output_directory("degroot")
-
-    analyzer = SemanticAnalyzer()
-    llm_analyses = []
-    degroot_variances_list = []
-
-    for i in range(1, 4):
-        llm_path = output_dir / f"run_{i}_history.json"
-        personas_path = output_dir / f"run_{i}_personas.json"
-
-        if llm_path.exists() and personas_path.exists():
-            print(f"Run {i}...")
-            llm_hist = load_json(llm_path)
-            node_personas = load_json(personas_path)
-
-            # LLM Analysis
-            llm_analyses.append(analyzer.analyze_simulation(llm_hist))
-
-            # DeGroot Analysis
-            G = create_network(NETWORK_TYPE, NETWORK_SIZE)
-            d_var = compare_with_degroot(G, node_personas, SIMULATION_ROUNDS)
-            degroot_variances_list.append(d_var)
-
-    if not llm_analyses:
-        return
-
-    avg_llm = aggregate_analyses(llm_analyses)
-
-    # Average DeGroot
-    avg_degroot = np.mean(degroot_variances_list, axis=0).tolist()
-
-    plot_llm_vs_degroot(avg_llm, avg_degroot, save_path=str(output_dir / "avg_llm_vs_degroot.png"))
+    print(f"✅ Comparison plots saved to {comp_dir}")
 
 
 # ============================================================================
@@ -308,10 +296,14 @@ def eval_degroot():
 # ============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="Workflow Evaluation")
-    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison", "degroot"], default="baseline")
+    parser = argparse.ArgumentParser(description="Workflow Evaluation - IMPROVED PROMPTS VERSION")
+    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison"], default="baseline")
 
     args = parser.parse_args()
+
+    print("\n" + "="*70)
+    print("🎭 EVALUATION: IMPROVED PROMPTS VERSION")
+    print("="*70 + "\n")
 
     if args.mode == "baseline":
         eval_baseline()
@@ -319,9 +311,10 @@ def main():
         eval_intervention()
     elif args.mode == "comparison":
         eval_topology()
-    elif args.mode == "degroot":
-        eval_degroot()
+
+    print("\n" + "="*70)
+    print("✅ Evaluation complete!")
+    print("="*70 + "\n")
 
 if __name__ == "__main__":
     main()
-

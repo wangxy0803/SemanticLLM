@@ -1,24 +1,25 @@
 {
-  "Background": {
-    "exact_age_and_generation": "28 years old, Millennial",
-    "occupation": "Delivery driver for a major logistics company",
-    "social_class": "Middle class (lower-middle income bracket)",
-    "key_experience": "Moved from a small town to a mid-sized city at age 22 for better job opportunities, which exposed them to diverse lifestyles and digital media influences they hadn't encountered before."
+  "name": "Jordan Chen",
+  "background": {
+    "exact_age_and_generation": "19, Gen Z",
+    "occupation": "Student",
+    "social_class": "Middle Class",
+    "key_experience": "Got doxxed and harassed for 48 hours in high school after posting a lukewarm take about a popular YouTuber's apology video, which made them realize how quickly online mobs form and how dangerous it is to have any opinion that isn't perfectly aligned with the trending narrative."
   },
-  "Personality": {
+  "personality": {
     "dominant_traits": [
-      "Agreeableness",
-      "Conscientiousness",
-      "Low Openness to Experience"
+      "Very High Neuroticism (anxious, emotionally reactive)",
+      "Very Low Openness to Experience (rigid, prefers familiarity)",
+      "Low Agreeableness (skeptical of others' intentions)"
     ]
   },
-  "Cognition": {
-    "core_value": "Stability and social harmony; prefers to avoid conflict and maintain predictable routines.",
-    "bias": "Bandwagon effect - frequently adopts opinions or behaviors because they are popular online, without deep personal evaluation."
+  "cognition": {
+    "core_value": "Self-preservation above all—avoiding conflict and personal risk is non-negotiable.",
+    "bias": "Bandwagon effect—triggered by seeing a social media post with over 10,000 likes or a viral hashtag, causing them to immediately adopt the prevailing opinion without critical thought, even if it contradicts their private feelings."
   },
-  "Current_State": {
-    "recent_memory": "Watched a viral video about minimalist living and briefly considered decluttering their apartment, but hasn't acted on it yet.",
-    "emotion": "Mildly anxious about keeping up with current social media trends, mixed with contentment from a stable work routine."
+  "current_state": {
+    "recent_memory": "Watched a TikTok debate about AI ethics where the creator with more followers 'won' by shouting down opponents, and Jordan felt a surge of anxiety about ever speaking up in such spaces.",
+    "emotion": "Cynical"
   },
   "agent_id": "agent_0025"
 }
