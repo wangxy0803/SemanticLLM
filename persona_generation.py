@@ -1,6 +1,6 @@
 """
 Persona generation module - creates diverse agent personas using LLM.
-Generates 50+ unique personas with psychological profiles.
+IMPROVED: Generates more extreme, opinionated, realistic personas
 """
 
 import json
@@ -15,32 +15,16 @@ from config import API_PROVIDER, DEEPSEEK_BASE_URL
 
 
 def load_seeds(filepath="prompts/seeds.json"):
-    """
-    Load weighted seed pools for persona generation.
-    
-    Args:
-        filepath: Path to seeds.json file
-        
-    Returns:
-        Dict of seed categories with weights
-    """
+    """Load weighted seed pools for persona generation."""
     if not os.path.exists(filepath):
-        filepath = "seeds.json"  # Fallback
+        filepath = "seeds.json"
     
     with open(filepath, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
 def weighted_choice(seed_list):
-    """
-    Randomly select from weighted list.
-    
-    Args:
-        seed_list: List of {"trait": "...", "weight": X} dicts
-        
-    Returns:
-        Selected trait string
-    """
+    """Randomly select from weighted list."""
     traits = [item["trait"] for item in seed_list]
     weights = [item["weight"] for item in seed_list]
     return random.choices(traits, weights=weights, k=1)[0]
@@ -50,52 +34,86 @@ def generate_persona_anthropic(client: anthropic.Anthropic,
                                occupation: str,
                                social_class: str,
                                personality: str) -> dict:
-    """Generate persona using Claude API."""
+    """Generate persona using Claude API with IMPROVED prompting for diversity."""
     
-    prompt = f"""Create a complete psychological profile for a simulated person.
+    prompt = f"""Create a psychologically REALISTIC and OPINIONATED person for a social network simulation.
 
-Base Seeds:
+CRITICAL: Generate someone who would ACTUALLY participate in online discussions - NOT a balanced diplomat!
+
+## Base Seeds (Use these but make them SPECIFIC)
 - Occupation: {occupation}
 - Social Class: {social_class}
 - Core Personality: {personality}
 
-Generate a realistic profile with:
-1. Background (age/generation, occupation, social class, key life experience)
-2. Personality (1-3 dominant Big Five traits)
-3. Cognition (core value, cognitive bias)
-4. Current State (recent memory, current emotion)
+## Requirements for REALISM
 
-Output as JSON matching this structure:
+1. **STRONG OPINIONS**: This person has DEFINITE views, not "I see both sides"
+2. **PERSONAL HISTORY**: A specific life experience that SHAPES their worldview
+3. **COGNITIVE BIAS**: A real bias that makes them discount certain arguments
+4. **EMOTIONAL STATE**: Not just "neutral" - they're frustrated, excited, worried, hopeful, etc.
+5. **UNIQUE VOICE**: They should sound DIFFERENT from other people
+
+## Generate This Structure:
+
 {{
   "Background": {{
-    "exact_age_and_generation": "e.g., 28 years old, Millennial",
-    "occupation": "...",
-    "social_class": "...",
-    "key_experience": "A defining life event"
+    "exact_age_and_generation": "Specific age + generation (e.g., '34 years old, Millennial')",
+    "occupation": "{occupation}",
+    "social_class": "{social_class}",
+    "key_experience": "ONE specific experience that shaped their views on technology/robots (make it PERSONAL and VIVID)"
   }},
   "Personality": {{
-    "dominant_traits": ["Trait 1", "Trait 2"]
+    "dominant_traits": ["Pick 2-3 SPECIFIC Big Five traits that create a DISTINCTIVE personality", "Be extreme - 'Very High Openness' or 'Very Low Agreeableness' not just 'Moderate'"]
   }},
   "Cognition": {{
-    "core_value": "...",
-    "bias": "..."
+    "core_value": "ONE deeply held value they will NOT compromise on",
+    "bias": "A SPECIFIC cognitive bias (confirmation bias, availability heuristic, sunk cost fallacy, etc.) and what triggers it"
   }},
   "Current_State": {{
-    "recent_memory": "Specific recent event",
-    "emotion": "Current emotion"
+    "recent_memory": "Something SPECIFIC they recently saw/read/experienced (last week, not vague)",
+    "emotion": "Their CURRENT emotional state (anxious, fired up, frustrated, optimistic, cynical, etc.)"
   }}
-}}"""
+}}
+
+**CRITICAL: Output must be valid JSON format matching the structure above.**
+
+## Examples of GOOD vs BAD Personas
+
+❌ BAD (Generic):
+- key_experience: "Has seen both benefits and drawbacks of technology"
+- emotion: "Thoughtful and balanced"
+- core_value: "Wants what's best for society"
+
+✅ GOOD (Specific):
+- key_experience: "Sister lost her factory job to automation in 2019, family struggled for 2 years"
+- emotion: "Angry and protective of working-class families"
+- core_value: "Workers' dignity matters more than corporate efficiency"
+
+❌ BAD:
+- bias: "Tends to be logical in evaluations"
+- recent_memory: "Read various articles about robots"
+
+✅ GOOD:
+- bias: "Availability heuristic - recent viral video of robot malfunction dominates their thinking"
+- recent_memory: "Cousin sent them TikTok yesterday of robot 'attacking' a warehouse worker"
+
+## Make This Person MEMORABLE
+- Give them a STRONG stance (very pro, very anti, or very conflicted)
+- Give them a REASON for that stance (the key_experience)
+- Give them a WEAKNESS in reasoning (the bias)
+- Give them CURRENT motivation (recent_memory + emotion)
+
+BE CREATIVE. Make each person DIFFERENT. Avoid corporate speak or diplomatic language."""
 
     try:
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=1000,
+            max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.8
+            temperature=0.9  # Higher temperature for more diversity
         )
         
         content = response.content[0].text.strip()
-        # Remove markdown if present
         if content.startswith("```json"):
             content = content[7:]
         if content.endswith("```"):
@@ -112,35 +130,57 @@ def generate_persona_openai(client: openai.OpenAI,
                             occupation: str,
                             social_class: str,
                             personality: str) -> dict:
-    """Generate persona using OpenAI-compatible API (DeepSeek, OpenAI)."""
+    """Generate persona using OpenAI-compatible API with IMPROVED prompting."""
     
-    system_prompt = "You are an expert in psychology and sociology. Generate realistic persona profiles in JSON format."
-    
-    user_prompt = f"""Create a complete psychological profile for a simulated person.
+    system_prompt = """You are a psychology expert creating REALISTIC, OPINIONATED personas for social simulation. 
 
-Base Seeds:
+Create people who would ACTUALLY participate in heated online discussions - NOT balanced diplomats or corporate spokespeople. Each person should have:
+- STRONG opinions (not "I see both sides")
+- SPECIFIC life experiences that shaped their views
+- REAL cognitive biases
+- CURRENT emotional states (not neutral)
+- UNIQUE voices
+
+Make each persona MEMORABLE and DIFFERENT."""
+    
+    user_prompt = f"""Create a realistic person for online discussion simulation.
+
+Base traits to incorporate:
 - Occupation: {occupation}
 - Social Class: {social_class}
 - Core Personality: {personality}
 
-Generate JSON with these fields:
-- Background: exact_age_and_generation, occupation, social_class, key_experience
-- Personality: dominant_traits (array of 1-3 Big Five traits)
-- Cognition: core_value, bias
-- Current_State: recent_memory, emotion
+Generate JSON with:
 
-Make it realistic and specific."""
+1. Background:
+   - exact_age_and_generation: Specific age + generation
+   - occupation: {occupation}
+   - social_class: {social_class}
+   - key_experience: ONE vivid, personal experience that shaped their tech views
+
+2. Personality:
+   - dominant_traits: 2-3 EXTREME Big Five traits (e.g., "Very High Conscientiousness", "Very Low Agreeableness")
+
+3. Cognition:
+   - core_value: ONE non-negotiable value
+   - bias: SPECIFIC cognitive bias and what triggers it
+
+4. Current_State:
+   - recent_memory: Something specific from last week
+   - emotion: Current mood (angry, excited, worried, cynical, etc.)
+
+Make them OPINIONATED and SPECIFIC. Avoid generic balanced personas."""
 
     try:
         response = client.chat.completions.create(
-            model="deepseek-chat",  # Works for both DeepSeek and OpenAI
+            model="deepseek-chat",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             response_format={"type": "json_object"},
-            temperature=0.8,
-            max_tokens=1000
+            temperature=0.9,  # Higher temperature
+            max_tokens=1500
         )
         
         return json.loads(response.choices[0].message.content)
@@ -151,18 +191,7 @@ Make it realistic and specific."""
 
 
 def generate_persona(seeds: dict, api_provider: str, client) -> dict:
-    """
-    Generate a single persona using configured API.
-    
-    Args:
-        seeds: Seed pool dict
-        api_provider: "anthropic" or "deepseek"/"openai"
-        client: API client
-        
-    Returns:
-        Generated persona dict or None
-    """
-    # Randomly select seeds with weights
+    """Generate a single persona using configured API."""
     occupation = weighted_choice(seeds["occupations"])
     social_class = weighted_choice(seeds["social_classes"])
     personality = weighted_choice(seeds["personality_seeds"])
@@ -178,19 +207,7 @@ def generate_and_save_persona(seeds: dict,
                               output_dir: Path,
                               api_provider: str,
                               client) -> bool:
-    """
-    Generate and save a single persona to JSON file.
-    
-    Args:
-        seeds: Seed pool
-        agent_idx: Agent index number
-        output_dir: Output directory
-        api_provider: API provider name
-        client: API client
-        
-    Returns:
-        True if successful
-    """
+    """Generate and save a single persona to JSON file."""
     agent_id = f"agent_{agent_idx:04d}"
     print(f"Generating persona for {agent_id}...")
 
@@ -206,10 +223,8 @@ def generate_and_save_persona(seeds: dict,
 
 def main():
     """Main execution - generate 50 personas."""
-    # Load environment variables
     load_dotenv()
     
-    # Setup
     seeds = load_seeds("prompts/seeds.json")
     num_agents_to_generate = 50
     output_dir = Path("prompts/persona")
@@ -235,7 +250,8 @@ def main():
     else:
         raise ValueError(f"Unsupported API_PROVIDER: {API_PROVIDER}")
 
-    print(f"Starting generation of {num_agents_to_generate} personas using {API_PROVIDER}...")
+    print(f"Starting IMPROVED generation of {num_agents_to_generate} DIVERSE personas using {API_PROVIDER}...")
+    print("Focusing on creating OPINIONATED, REALISTIC people...")
 
     # Generate with retries
     to_generate = list(range(num_agents_to_generate))
@@ -269,7 +285,7 @@ def main():
             if to_generate:
                 print(f"Retrying {len(to_generate)} failed generations...")
 
-    print(f"\nDone! Successfully generated {success_count} personas.")
+    print(f"\nDone! Successfully generated {success_count} DIVERSE, OPINIONATED personas.")
     print(f"Results saved in {output_dir}")
 
 

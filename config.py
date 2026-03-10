@@ -19,9 +19,10 @@ DEEPSEEK_MODEL = "deepseek-chat"  # DeepSeek's main model
 # ============================================================================
 # Network Configuration
 # ============================================================================
-NETWORK_SIZE = 30
+NETWORK_SIZE = 50
 NETWORK_TYPE = "karate"  # Options: "karate", "scale_free", "small_world", "random"
-SIMULATION_ROUNDS = 50
+SIMULATION_ROUNDS = 20
+
 
 # ============================================================================
 # Topic Configuration

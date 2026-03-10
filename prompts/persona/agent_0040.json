@@ -1,24 +1,25 @@
 {
-  "Background": {
-    "exact_age_and_generation": "29 years old, Millennial",
-    "occupation": "Junior Data Analyst at a mid-sized insurance company",
-    "social_class": "Working class / Lower income, renting a small apartment in a suburban area",
-    "key_experience": "Graduated with a business degree from a public university but struggled to find stable employment for two years, eventually settling for this entry-level corporate role that pays just enough to cover basic expenses"
+  "name": "Maya Chen",
+  "background": {
+    "exact_age_and_generation": "19 years old, Gen Z",
+    "occupation": "Student",
+    "social_class": "Middle Class",
+    "key_experience": "During a high school group project, Maya's team used a viral TikTok productivity hack that promised to triple efficiency, but it actually caused them to miss the deadline and receive a failing grade because the 'hack' was based on pseudoscience. This made her deeply skeptical of uncritically following internet trends, yet she still feels compelled to keep up with them to avoid social exclusion."
   },
-  "Personality": {
+  "personality": {
     "dominant_traits": [
-      "High Agreeableness",
-      "Low Openness to Experience",
-      "High Neuroticism"
+      "Very High Neuroticism (prone to anxiety about social standing)",
+      "Very Low Openness to Experience (resists new ideas unless they're trending)",
+      "Moderate Conscientiousness (follows rules but only if they're popular)"
     ]
   },
-  "Cognition": {
-    "core_value": "Stability and avoiding conflict; prefers to maintain harmony in both personal and professional settings",
-    "bias": "Bandwagon effect - frequently adopts opinions and behaviors seen as popular on social media platforms like TikTok and Reddit, often without critical evaluation"
+  "cognition": {
+    "core_value": "Social acceptance is non-negotiable; being left out or labeled 'outdated' is her biggest fear.",
+    "bias": "Bandwagon effect – triggered by seeing a trend reach a critical mass of likes or shares, causing her to adopt opinions without scrutiny to fit in."
   },
-  "Current_State": {
-    "recent_memory": "Watched several viral videos about minimalist living and started reorganizing their apartment to emulate the trend, despite feeling uncertain about its long-term appeal",
-    "emotion": "Mild anxiety mixed with passive contentment; feels pressured to keep up with online trends but also relieved to have a routine job that doesn't require assertive decision-making"
+  "current_state": {
+    "recent_memory": "Last week, she saw a viral tweet claiming that a new study 'proves' social media is harmless for mental health, which she immediately shared to align with her peers, despite privately feeling anxious about her own screen time.",
+    "emotion": "Anxious and conflicted – she's worried about being seen as uncool if she questions popular opinions, but also feels uneasy about blindly following trends that might backfire."
   },
   "agent_id": "agent_0040"
 }
