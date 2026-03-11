@@ -57,6 +57,8 @@ SemanticLLM/
     │   │   ├── run_1_history.json
     │   │   ├── run_2_history.json
     │   │   ├── run_3_history.json
+    │   │   ├── avg_semantic_heatmap.png
+    │   │   ├── semantic_network_evolution.gif
     │   │   ├── avg_semantic_variance.png
     │   │   ├── avg_topic_drift.png
     │   │   └── avg_polarization_index.png
@@ -132,6 +134,11 @@ SIMULATION_ROUNDS = 20  # Conversation rounds
 │ Step 4: Repeat evaluation as needed                     │
 │   Analyze same data with different parameters           │
 └─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│ Step 5: Run Visualization as needed                     │
+│   python main.py --stage visualization --mode baseline  │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -188,6 +195,22 @@ python main.py --stage evaluation --mode baseline
 ![Topic Drift](outputs/baseline/karate/avg_topic_drift.png)
   - `avg_polarization_index.png` - Network fragmentation
 ![polarization index](outputs/baseline/karate/avg_polarization_index.png)
+
+
+#### Visualization Stage:
+
+```bash
+python main.py --stage visualization --mode baseline
+```
+
+**What it does:**
+- Loads 3 run histories
+- Applies advanced dimensionality reduction (UMAP/PCA) and clustering (KMeans/Hierarchical) to high-dimensional SBERT embeddings
+- Generates plots:
+  - `avg_semantic_heatmap.png` - Echo Chamber Detection
+![Semantic Heatmap](outputs/baseline/karate/avg_semantic_heatmap.png)
+  - `semantic_network_evolution` - Dynamic Network Evolution
+![Network Evolution](outputs/baseline/karate/semantic_network_evolution.gif)
 
 ---
 
