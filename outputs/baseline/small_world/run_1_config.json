@@ -1,0 +1,6 @@
+{
+  "network_type": "small_world",
+  "network_size": 50,
+  "topic": "Should we support large-scale deployment of humanoid robots in our society?",
+  "using_improved_prompts": true
+}

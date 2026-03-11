@@ -250,6 +250,13 @@ python main.py --stage evaluation --mode intervention
 **What it does:**
 - Averages baseline and intervention results across 3 runs
 - Generates comparative plots:
+  - `avg_intervention_comparison.png` 
+![Semantic Variance](outputs/intervention/avg_intervention_comparison.png)
+  - `avg_intervention_topic_drift.png` 
+![Topic Drift](outputs/intervention/avg_intervention_topic_drift.png)
+  - `avg_intervention_polarization.png` 
+![polarization index](outputs/intervention/avg_intervention_polarization.png)
+
 
 
 ---
@@ -282,12 +289,13 @@ python main.py --stage evaluation --mode comparison
 **What it does:**
 - Averages results for each topology (3 runs each)
 - Generates comparative plots:
-  - All 3 topologies on same variance plot
-  - Polarization comparison
-  - Topic drift comparison
+  - `topology_comparison_variance.png` 
+![Semantic Variance](outputs/baseline/comparison_results/topology_comparison_variance.png)
+  - `topology_comparison_topic_drift.png` 
+![Topic Drift](outputs/baseline/comparison_results/topology_comparison_topic_drift.png)
+  - `topology_comparison_polarization.png` 
+![polarization index](outputs/baseline/comparison_results/topology_comparison_polarization.png)
 
-
-**Generated plots:**
 
 ---
 
