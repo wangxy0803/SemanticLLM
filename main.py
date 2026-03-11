@@ -24,6 +24,7 @@ matplotlib.use('Agg')
 # Import workflow modules  
 import workflow_generation
 import workflow_eval
+import workflow_visualization
 from config import API_KEY, API_PROVIDER
 
 import matplotlib.pyplot as plt
@@ -50,12 +51,13 @@ def main():
 Examples:
   python main.py --stage generation --mode baseline
   python main.py --stage evaluation --mode baseline
+  python main.py --stage visualization --mode baseline
   
 Before running, make sure you've generated personas with improved prompts:
   python persona_generation.py
         """
     )
-    parser.add_argument("--stage", choices=["generation", "evaluation"], required=True, 
+    parser.add_argument("--stage", choices=["generation", "evaluation", "visualization"], required=True, 
                        help="Workflow stage")
     parser.add_argument("--mode", choices=["baseline", "intervention", "comparison"], required=True,
                        help="Experiment mode")
@@ -109,6 +111,10 @@ Before running, make sure you've generated personas with improved prompts:
             workflow_eval.eval_intervention()
         elif args.mode == "comparison":
             workflow_eval.eval_topology()
+    
+    elif args.stage == "visualization":
+        workflow_visualization.run_averaged_heatmap(args.mode)
+        workflow_visualization.run_animated_network_evolution(args.mode)
 
     print("\n" + "="*80)
     print("✅ COMPLETE!")
