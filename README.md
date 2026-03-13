@@ -57,7 +57,7 @@ SemanticLLM/
     │   │   ├── run_1_history.json
     │   │   ├── run_2_history.json
     │   │   ├── run_3_history.json
-    │   │   ├── avg_semantic_heatmap.png
+    │   │   ├── semantic_network_snapshots.png
     │   │   ├── semantic_network_evolution.gif
     │   │   ├── avg_semantic_variance.png
     │   │   ├── avg_topic_drift.png
@@ -207,8 +207,8 @@ python main.py --stage visualization --mode baseline
 - Loads 3 run histories
 - Applies advanced dimensionality reduction (UMAP/PCA) and clustering (KMeans/Hierarchical) to high-dimensional SBERT embeddings
 - Generates plots:
-  - `avg_semantic_heatmap.png` - Echo Chamber Detection
-![Semantic Heatmap](outputs/baseline/karate/avg_semantic_heatmap.png)
+  - `semantic_network_snapshots.png` - Static Network Snapshots
+![Network Snapshots](outputs/baseline/karate/semantic_network_snapshots.png)
   - `semantic_network_evolution` - Dynamic Network Evolution
 ![Network Evolution](outputs/baseline/karate/semantic_network_evolution.gif)
 
