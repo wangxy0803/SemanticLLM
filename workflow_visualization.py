@@ -96,71 +96,57 @@ def run_animated_network_evolution(mode, outputs_dir="outputs", run_id=1):
     
     print(f"[+] Dynamic evolution diagram saved successfully to: {save_path}")
 
+    print("[*] Generating static snapshots grid...")
+    interval = 5
+    frames_to_plot = list(range(0, num_rounds, interval))
+    
+    if frames_to_plot[-1] != num_rounds - 1:
+        frames_to_plot.append(num_rounds - 1)
 
-def run_averaged_heatmap(mode, outputs_dir="outputs"):
-    print(f"[*] Starting to generate 3-run averaged distance heatmap - Mode: {mode}")
+    n_plots = len(frames_to_plot)
+    cols = min(5, n_plots)
+    rows = (n_plots - 1) // cols + 1
+
+    fig_grid, axes = plt.subplots(rows, cols, figsize=(4 * cols, 4 * rows))
     
-    search_pattern = os.path.join(outputs_dir, mode, "**", "run_*_history.json")
-    history_files = glob.glob(search_pattern, recursive=True)
-    
-    if len(history_files) == 0:
-        print(f"[!] No history files found for mode '{mode}'. Please ensure the generation stage has been completed for this mode.")
-        return
+    if n_plots == 1:
+        axes_flat = [axes]
+    else:
+        axes_flat = np.array(axes).flatten()
+
+    for idx, frame in enumerate(frames_to_plot):
+        ax_g = axes_flat[idx]
+        current_colors = color_matrix[frame]
         
-    print(f"[*] Found {len(history_files)} run result files, preparing to calculate average matrix...")
-
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    all_distance_matrices = []
-    agent_ids = None
-
-    for file_path in history_files:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-            
-        if agent_ids is None:
-            agent_ids = list(history[0].keys())
-            
-        final_round = history[-1]
-        final_texts = [final_round.get(aid, "") for aid in agent_ids]
+        nx.draw_networkx_edges(sub_G, pos, ax=ax_g, alpha=0.3, edge_color='gray')
+        nx.draw_networkx_nodes(
+            sub_G, pos, ax=ax_g, nodelist=valid_nodes,
+            node_color=current_colors, cmap=cmap, 
+            node_size=150, edgecolors='black', vmin=0, vmax=1
+        )
+        nx.draw_networkx_labels(sub_G, pos, ax=ax_g, font_size=7, font_color='white')
         
-        embeddings = model.encode(final_texts)
-        dist_matrix = cosine_distances(embeddings)
-        all_distance_matrices.append(dist_matrix)
+        ax_g.set_title(f"Round {frame}", fontsize=12)
+        ax_g.axis('off')
 
-    avg_dist_matrix = np.mean(np.stack(all_distance_matrices), axis=0)
+    for idx in range(n_plots, len(axes_flat)):
+        axes_flat[idx].axis('off')
 
-    linkage = sch.linkage(sch.distance.squareform(avg_dist_matrix), method='ward')
-    order = sch.leaves_list(linkage)
-    
-    sorted_avg_matrix = avg_dist_matrix[order, :][:, order]
-    sorted_agent_ids = [agent_ids[i] for i in order]
+    plt.tight_layout()
+    fig_grid.subplots_adjust(right=0.92)
+    cbar_ax = fig_grid.add_axes([0.94, 0.15, 0.02, 0.7])
+    fig_grid.colorbar(sm, cax=cbar_ax, label='Semantic Alignment (PCA 1D)')
 
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(sorted_avg_matrix, 
-                cmap="viridis_r", 
-                vmin=0, vmax=0.45,
-                xticklabels=sorted_agent_ids, 
-                yticklabels=sorted_agent_ids,
-                cbar_kws={'label': 'Average Cosine Distance'})
+    grid_save_path = os.path.join(save_dir, 'semantic_network_snapshots.png')
+    fig_grid.savefig(grid_save_path, dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close(fig_grid)
     
-    plt.title(f'Averaged Semantic Distance Heatmap (3 Runs) - Mode: {mode}\n(Hierarchically Clustered)', fontsize=14)
-    plt.xlabel('Agent ID', fontsize=12)
-    plt.ylabel('Agent ID', fontsize=12)
-    
-    plt.xticks(np.arange(0, len(agent_ids), 5), sorted_agent_ids[::5], rotation=45)
-    plt.yticks(np.arange(0, len(agent_ids), 5), sorted_agent_ids[::5], rotation=0)
+    print(f"[+] Static snapshots grid saved successfully to: {grid_save_path}")
 
-    save_dir = os.path.dirname(history_files[0])
-    save_path = os.path.join(save_dir, 'avg_semantic_heatmap.png')
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    print(f"[+] Average heatmap saved successfully to: {save_path}")
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="baseline")
     args = parser.parse_args()
-    run_averaged_heatmap(args.mode)
     run_animated_network_evolution(args.mode)

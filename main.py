@@ -113,7 +113,6 @@ Before running, make sure you've generated personas with improved prompts:
             workflow_eval.eval_topology()
     
     elif args.stage == "visualization":
-        workflow_visualization.run_averaged_heatmap(args.mode)
         workflow_visualization.run_animated_network_evolution(args.mode)
 
     print("\n" + "="*80)
