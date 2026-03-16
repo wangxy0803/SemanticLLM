@@ -1,0 +1,6 @@
+{
+  "run_id": 3,
+  "model": "minimax/minimax-m2.5",
+  "network_type": "karate",
+  "topic": "Should we support large-scale deployment of humanoid robots in our society?"
+}

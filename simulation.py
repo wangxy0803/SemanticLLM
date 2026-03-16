@@ -100,7 +100,8 @@ def run_simulation(G: nx.Graph,
                    node_personas: Dict[int, Dict],
                    api_client,
                    num_rounds: int = 8,
-                   verbose: bool = True) -> List[Dict[int, str]]:
+                   verbose: bool = True,
+                   model_name: str = None) -> List[Dict[int, str]]:
     """
     Run the full multi-round simulation with parallel agent processing.
     
@@ -110,6 +111,7 @@ def run_simulation(G: nx.Graph,
         api_client: API client (Anthropic, DeepSeek, or OpenAI)
         num_rounds: Number of simulation rounds
         verbose: Print progress updates
+        model_name: Specific model to use (if None, uses default from config)
         
     Returns:
         List of opinion snapshots (one dict per round)
@@ -136,9 +138,14 @@ def run_simulation(G: nx.Graph,
     }
     opinion_history = [current_opinions.copy()]
 
+    # Determine model to use
+    if model_name is None:
+        model_name = API_MODEL
+
     print(f"\n{'='*60}")
     print(f"Starting simulation: {num_rounds} rounds, {len(agents)} agents")
     print(f"Using API: {API_PROVIDER}")
+    print(f"Model: {model_name}")
     print(f"{'='*60}\n")
 
     # Run each round
@@ -175,7 +182,7 @@ def run_simulation(G: nx.Graph,
                     neighbor_messages=neighbor_messages,
                     is_bot=is_bot,
                     current_opinion=current_op,
-                    model_name=API_MODEL
+                    model_name=model_name
                 ))
 
             # Collect results as they complete

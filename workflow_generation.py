@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from config import (
     API_PROVIDER, API_KEY,
     NETWORK_SIZE, NETWORK_TYPE, SIMULATION_ROUNDS,
-    CONTROVERSIAL_TOPIC
+    CONTROVERSIAL_TOPIC, OPENROUTER_MODELS
 )
 from network_generation import (
     create_network, visualize_network, print_network_stats,
@@ -182,17 +182,17 @@ def generate_topology(api_key: str):
         print(f"\n--- Topology: {topology.upper()} ---")
         output_dir = setup_output_directory(f"baseline/{topology}")
 
+        # 1. Create specific network (ONCE per topology)
+        G = create_network(topology, NETWORK_SIZE)
+        try:
+            node_personas = load_generated_personas(G)
+        except Exception as e:
+            print(f"\n❌ Error loading personas: {e}")
+            print("Please generate personas first: python persona_generation.py")
+            return
+
         for i in range(1, 4):
             print(f"  > Run {i}/3")
-
-            # 1. Create specific network
-            G = create_network(topology, NETWORK_SIZE)
-            try:
-                node_personas = load_generated_personas(G)
-            except Exception as e:
-                print(f"\n❌ Error loading personas: {e}")
-                print("Please generate personas first: python persona_generation.py")
-                return
 
             # 2. Run
             opinion_history = run_simulation(G, node_personas, api_client, SIMULATION_ROUNDS, verbose=False)
@@ -210,13 +210,68 @@ def generate_topology(api_key: str):
         print(f"✅ {topology} topology completed!")
 
 
+def generate_model_comparison(api_key: str):
+    print("\n=== GENERATION: MODEL COMPARISON ===")
+    print("Running simulation with different LLMs via OpenRouter")
+    
+    # Initialize OpenRouter client
+    import openai
+    from config import OPENROUTER_BASE_URL
+    
+    client = openai.OpenAI(
+        api_key=api_key,
+        base_url=OPENROUTER_BASE_URL
+    )
+    
+    # 1. Setup Network (Constant across models for fair comparison)
+    G = create_network(NETWORK_TYPE, NETWORK_SIZE)
+    try:
+        node_personas = load_generated_personas(G)
+    except Exception as e:
+        print(f"\n❌ Error loading personas: {e}")
+        return
+
+    # Use 'model_comparison' folder as requested
+    output_dir = setup_output_directory("model_comparison")
+    
+    # Save common setup
+    save_json(node_personas, output_dir / "personas.json")
+    visualize_network(G, node_personas, save_path=str(output_dir / "network.png"))
+    
+    models = OPENROUTER_MODELS[:4] # Take first 4 models
+    
+    for i, model_name in enumerate(models, 1):
+        if i<3:
+            continue
+        print(f"\n--- RUN {i}/4: Model {model_name} ---")
+        
+        # Save config
+        save_json({
+            "run_id": i,
+            "model": model_name,
+            "network_type": NETWORK_TYPE,
+            "topic": CONTROVERSIAL_TOPIC
+        }, output_dir / f"run_{i}_config.json")
+        
+        # Run simulation with specific model
+        # Note: We reuse G and personas, but run_simulation creates fresh agent instances
+        opinion_history = run_simulation(
+            G, node_personas, client, SIMULATION_ROUNDS, 
+            model_name=model_name
+        )
+        
+        # Save history
+        save_json(opinion_history, output_dir / f"run_{i}_history.json")
+        print(f"✅ Run {i} ({model_name}) completed!")
+        
+
 # ============================================================================
 # Main Wrapper
 # ============================================================================
 
 def main():
     parser = argparse.ArgumentParser(description="Workflow Generation - IMPROVED PROMPTS VERSION")
-    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison"], default="baseline")
+    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison", "model_comparison"], default="baseline")
     parser.add_argument("--api-key", type=str, default=None)
 
     args = parser.parse_args()
@@ -248,6 +303,8 @@ def main():
         generate_intervention(api_key)
     elif args.mode == "comparison":
         generate_topology(api_key)
+    elif args.mode == "model_comparison":
+        generate_model_comparison(api_key)
 
     print("\n" + "="*70)
     print("✅ Generation complete! Check outputs/ for results")

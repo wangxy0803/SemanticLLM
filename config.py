@@ -6,15 +6,24 @@ Defines personas, network parameters, and API settings.
 # ============================================================================
 # API Configuration
 # ============================================================================
-# API_PROVIDER = "anthropic"  # Options: "anthropic" (Claude), "deepseek", "openai"
+# API_PROVIDER = "anthropic"  # Options: "anthropic", "deepseek", "openai", "openrouter"
 # API_MODEL = "claude-sonnet-4-20250514"  # Default model (can be overridden)
-API_PROVIDER = "deepseek"
+API_PROVIDER = "openrouter"  # Using OpenRouter for model comparison
 API_MODEL = "deepseek-chat"
 API_KEY = None  # Set via environment variable or .env file
 
 # DeepSeek API configuration
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
 DEEPSEEK_MODEL = "deepseek-chat"  # DeepSeek's main model
+
+# OpenRouter API configuration
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_MODELS = [
+    "google/gemini-3-flash-preview",
+    "deepseek/deepseek-v3.2",
+    "minimax/minimax-m2.5",
+    "z-ai/glm-5"
+]
 
 # ============================================================================
 # Network Configuration

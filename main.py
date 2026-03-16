@@ -59,7 +59,7 @@ Before running, make sure you've generated personas with improved prompts:
     )
     parser.add_argument("--stage", choices=["generation", "evaluation", "visualization"], required=True, 
                        help="Workflow stage")
-    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison"], required=True,
+    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison", "model_comparison"], required=True,
                        help="Experiment mode")
     parser.add_argument("--api-key", type=str, default=None, 
                        help="API Key for generation")
@@ -85,6 +85,12 @@ Before running, make sure you've generated personas with improved prompts:
             if API_PROVIDER == "anthropic": api_key = os.getenv("ANTHROPIC_API_KEY")
             elif API_PROVIDER == "deepseek": api_key = os.getenv("DEEPSEEK_API_KEY")
             elif API_PROVIDER == "openai": api_key = os.getenv("OPENAI_API_KEY")
+            elif API_PROVIDER == "openrouter": api_key = os.getenv("OPENROUTER_API_KEY")
+
+        if not api_key:
+            # Fallback check for OpenRouter key if mode requires it
+            if args.mode == "model_comparison":
+                 api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
 
         if not api_key:
             print("❌ Error: API Key missing. Please provide via --api-key or .env")
@@ -100,6 +106,8 @@ Before running, make sure you've generated personas with improved prompts:
             workflow_generation.generate_intervention(api_key)
         elif args.mode == "comparison":
             workflow_generation.generate_topology(api_key)
+        elif args.mode == "model_comparison":
+            workflow_generation.generate_model_comparison(api_key)
 
     elif args.stage == "evaluation":
         print("📊 EVALUATION STAGE - Analyzing results (FREE - no API calls)")
@@ -111,6 +119,8 @@ Before running, make sure you've generated personas with improved prompts:
             workflow_eval.eval_intervention()
         elif args.mode == "comparison":
             workflow_eval.eval_topology()
+        elif args.mode == "model_comparison":
+            workflow_eval.eval_model_comparison()
     
     elif args.stage == "visualization":
         workflow_visualization.run_animated_network_evolution(args.mode)

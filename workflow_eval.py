@@ -22,7 +22,7 @@ from network_generation import create_network
 from measurement import (
     SemanticAnalyzer, plot_semantic_variance,
     plot_topic_drift, plot_hostility_trend,
-    plot_polarization_index
+    plot_polarization_index, plot_model_comparison
 )
 
 # ============================================================================
@@ -291,13 +291,102 @@ def eval_topology():
     print(f"✅ Comparison plots saved to {comp_dir}")
 
 
+def eval_model_comparison():
+    print("\n=== EVALUATION: MODEL COMPARISON ===")
+    
+    output_dir = setup_output_directory("model_comparison")
+    analyzer = SemanticAnalyzer()
+    
+    model_analyses = {}
+    
+    # Find all run configs
+    run_configs = list(output_dir.glob("run_*_config.json"))
+    
+    if not run_configs:
+        print("No model comparison runs found in outputs/model_comparison/")
+        # fallback to checking history files if config missing? No, need model name.
+        return
+        
+    # Sort simply by extracting number
+    try:
+        run_configs.sort(key=lambda p: int(p.stem.split('_')[1]))
+    except:
+        pass # sort by name if parsing fails
+    
+    for config_path in run_configs:
+        try:
+            # Extract ID from filename "run_X_config.json"
+            parts = config_path.stem.split('_')
+            if len(parts) >= 2 and parts[0] == 'run' and parts[2] == 'config':
+                run_id = parts[1]
+            else:
+                continue
+
+            history_path = output_dir / f"run_{run_id}_history.json"
+            
+            if not history_path.exists():
+                print(f"Skipping Run {run_id}: History file missing.")
+                continue
+                
+            config = load_json(config_path)
+            model_name = config.get("model", f"Model {run_id}")
+            
+            print(f"Analyzing Run {run_id}: {model_name}...")
+            history = load_json(history_path)
+            
+            analysis = analyzer.analyze_simulation(history, topic=CONTROVERSIAL_TOPIC)
+            
+            # Ensure unique keys for plot
+            if model_name in model_analyses:
+                model_name = f"{model_name} ({run_id})"
+            
+            model_analyses[model_name] = analysis
+
+        except Exception as e:
+            print(f"Error processing {config_path}: {e}")
+            continue
+        
+    if not model_analyses:
+        print("No valid analyses generated.")
+        return
+        
+    print("\nGenerating comparison plots...")
+    
+    plot_model_comparison(
+        model_analyses, 
+        metric="semantic_variance",
+        title="Semantic Variance (Model Comparison)",
+        ylabel="Variance (Lower = Consensus)",
+        save_path=str(output_dir / "comparison_variance.png")
+    )
+    
+    plot_model_comparison(
+        model_analyses, 
+        metric="polarization_indices",
+        title="Polarization Index (Model Comparison)",
+        ylabel="Polarization (Silhouette Score)",
+        save_path=str(output_dir / "comparison_polarization.png")
+    )
+    
+    plot_model_comparison(
+        model_analyses, 
+        metric="topic_drifts",
+        title="Topic Drift (Model Comparison)",
+        ylabel="Drift Distance",
+        save_path=str(output_dir / "comparison_drift.png")
+    )
+    
+    print(f"✅ Comparison plots saved to {output_dir}")
+
+
 # ============================================================================
 # Main Wrapper
 # ============================================================================
 
 def main():
     parser = argparse.ArgumentParser(description="Workflow Evaluation - IMPROVED PROMPTS VERSION")
-    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison"], default="baseline")
+    parser.add_argument("--stage", choices=["generation", "evaluation", "visualization"], default="evaluation")
+    parser.add_argument("--mode", choices=["baseline", "intervention", "comparison", "model_comparison"], default="baseline")
 
     args = parser.parse_args()
 
@@ -305,12 +394,23 @@ def main():
     print("🎭 EVALUATION: IMPROVED PROMPTS VERSION")
     print("="*70 + "\n")
 
-    if args.mode == "baseline":
-        eval_baseline()
-    elif args.mode == "intervention":
-        eval_intervention()
-    elif args.mode == "comparison":
-        eval_topology()
+    if args.stage == "evaluation":
+        print("📊 EVALUATION STAGE - Analyzing results (FREE - no API calls)")
+        
+        if args.mode == "baseline":
+            eval_baseline()
+        elif args.mode == "intervention":
+            eval_intervention()
+        elif args.mode == "comparison":
+            eval_topology()
+        elif args.mode == "model_comparison":
+            eval_model_comparison()
+    
+    elif args.stage == "visualization":
+        print("📈 VISUALIZATION STAGE - Generate plots from analysis results")
+        # Placeholder for future visualization code
+        # Currently, visualization is integrated within evaluation stages
+        print("No standalone visualization tasks defined.")
 
     print("\n" + "="*70)
     print("✅ Evaluation complete!")

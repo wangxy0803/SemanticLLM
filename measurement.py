@@ -455,23 +455,21 @@ def plot_hostility_trend(analysis_results: Dict,
     
     plt.close()
 
-def plot_polarization_index(analysis_results: Dict,
-                            title: str = "Polarization Index (Silhouette Score)",
-                            save_path: str = None,
-                            baseline_results: Dict = None):
+def plot_polarization_index(analysis_result: Dict, title: str = "Polarization Index", 
+                           save_path: str = None, baseline_results: Dict = None):
     """
     Plot polarization index (cluster formation) over time.
     High score = Agents are forming distinct camps (Echo Chambers).
     Low score = Agents are mixing or chaotic.
     """
-    if "polarization_indices" not in analysis_results:
+    if "polarization_indices" not in analysis_result:
         print("No polarization index data to plot.")
         return
 
     plt.figure(figsize=(10, 6))
 
     # Skip index 0
-    data = analysis_results["polarization_indices"][1:]
+    data = analysis_result["polarization_indices"][1:]
     rounds = range(1, len(data) + 1)
 
     plt.plot(rounds, data,
@@ -503,7 +501,59 @@ def plot_polarization_index(analysis_results: Dict,
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Polarization plot saved to {save_path}")
+        print(f"Saved plot: {save_path}")
 
+    plt.close()
+
+
+def plot_model_comparison(model_analyses: Dict[str, Dict], 
+                         metric: str = "semantic_variance",
+                         title: str = "Model Comparison",
+                         ylabel: str = "Semantic Variance",
+                         save_path: str = None):
+    """
+    Plot comparison of multiple models.
+    
+    Args:
+        model_analyses: Dict mapping model_name -> analysis_result dict
+        metric: Key in analysis_result to plot (e.g. "semantic_variance", "polarization_indices")
+        title: Plot title
+        ylabel: Y-axis label
+        save_path: Path to save plot
+    """
+    plt.figure(figsize=(12, 6))
+    
+    # Color cycle
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    
+    for i, (model_name, analysis) in enumerate(model_analyses.items()):
+        raw_data = analysis.get(metric, [])
+        if not raw_data or len(raw_data) <= 1:
+            continue
+            
+        # Skip the first point (initial state) as it is identical for all
+        data = raw_data[1:]
+        
+        color = colors[i % len(colors)]
+        rounds = range(1, len(raw_data))
+        
+        plt.plot(rounds, data, marker='o', linewidth=2, label=model_name, color=color)
+
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.xlabel('Round', fontsize=12)
+    plt.ylabel(ylabel, fontsize=12)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    # Integer x-axis
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved comparison plot: {save_path}")
+    
     plt.close()
 

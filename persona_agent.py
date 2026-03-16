@@ -172,19 +172,40 @@ REMEMBER: You're {self.bg.get('exact_age_and_generation', 'a person')} with {sel
                 result = json.loads(content.strip())
 
             elif isinstance(client, openai.OpenAI):
-                # OpenAI-compatible API (DeepSeek, OpenAI)
+                # OpenAI-compatible API (DeepSeek, OpenAI, OpenRouter)
+                # Note: We do NOT use response_format={"type": "json_object"} here because 
+                # many OpenRouter models (like Minimax, Gemini, etc.) do not support it 
+                # or fail when it is provided. We rely on the system prompt for JSON.
                 response = client.chat.completions.create(
                     model=model_name or "deepseek-chat",
                     messages=[
                         {"role": "system", "content": system_instruction},
                         {"role": "user", "content": user_content}
                     ],
-                    response_format={"type": "json_object"},
                     temperature=1.0,  # High temperature for diversity
                     max_tokens=1200
                 )
 
-                result = json.loads(response.choices[0].message.content)
+                content = response.choices[0].message.content
+                if not content:
+                    raise ValueError("Received empty response from API")
+
+                # Remove markdown code blocks if present (common in some OpenRouter models)
+                content = content.strip()
+                if content.startswith("```json"):
+                    content = content[7:]
+                elif content.startswith("```"):
+                    content = content[3:]
+                if content.endswith("```"):
+                    content = content[:-3]
+                
+                content = content.strip()
+                
+                try:
+                    result = json.loads(content)
+                except json.JSONDecodeError as e:
+                    print(f"[Agent {self.node_id}] JSON Parse Error. Content received:\n{content}\n")
+                    raise e
 
             else:
                 raise ValueError("Unsupported client type")

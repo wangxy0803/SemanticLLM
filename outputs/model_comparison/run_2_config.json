@@ -1,0 +1,6 @@
+{
+  "run_id": 2,
+  "model": "deepseek/deepseek-v3.2",
+  "network_type": "karate",
+  "topic": "Should we support large-scale deployment of humanoid robots in our society?"
+}
