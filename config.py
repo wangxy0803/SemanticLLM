@@ -30,7 +30,7 @@ OPENROUTER_MODELS = [
 # ============================================================================
 NETWORK_SIZE = 50
 NETWORK_TYPE = "karate"  # Options: "karate", "scale_free", "small_world", "random"
-SIMULATION_ROUNDS = 20
+SIMULATION_ROUNDS = 50
 
 
 # ============================================================================

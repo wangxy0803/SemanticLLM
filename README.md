@@ -104,7 +104,7 @@ API_MODEL = "deepseek-chat"
 # Network settings
 NETWORK_SIZE = 50  # Number of agents
 NETWORK_TYPE = "karate"  # Default network topology
-SIMULATION_ROUNDS = 20  # Conversation rounds
+SIMULATION_ROUNDS = 20  # Conversation rounds (50 for baseline)
 ```
 
 
