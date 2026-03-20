@@ -97,14 +97,14 @@ def run_animated_network_evolution(mode, outputs_dir="outputs", run_id=1):
     print(f"[+] Dynamic evolution diagram saved successfully to: {save_path}")
 
     print("[*] Generating static snapshots grid...")
-    interval = 5
+    interval = 10
     frames_to_plot = list(range(0, num_rounds, interval))
     
     if frames_to_plot[-1] != num_rounds - 1:
         frames_to_plot.append(num_rounds - 1)
 
     n_plots = len(frames_to_plot)
-    cols = min(5, n_plots)
+    cols = n_plots
     rows = (n_plots - 1) // cols + 1
 
     fig_grid, axes = plt.subplots(rows, cols, figsize=(4 * cols, 4 * rows))
